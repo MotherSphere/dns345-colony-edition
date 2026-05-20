@@ -452,16 +452,19 @@ div.alert_overlay_XL,
 }
 
 /* Native overflow scrollbars - Firefox uses standard CSS props.
-   Apply to ALL elements that might scroll so .scroll-pane, iframes,
-   and the body itself all get the Colony scrollbar. */
+   Apply EVERYWHERE with !important to beat any GTK theme scrollbar
+   Firefox would otherwise render on Linux. */
+html,
+body,
 *,
 *::before,
 *::after,
 .scroll-pane,
 .holder,
+#my_scroll,
 iframe {
-    scrollbar-color: var(--colony-red-soft) var(--colony-parchment-pressed);
-    scrollbar-width: thin;
+    scrollbar-color: var(--colony-red-soft) var(--colony-parchment-pressed) !important;
+    scrollbar-width: thin !important;
 }
 
 /* =========================================================================
