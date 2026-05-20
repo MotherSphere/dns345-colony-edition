@@ -338,6 +338,71 @@ def gen_alert_icons():
         print(f"  alert ic  50x60   {rel}")
 
 
+def gen_jscrollpane_assets():
+    """jScrollPane plugin uses 12 PNG sprites for its custom scrollbar
+    (.osX variants). We replace them all with Colony-tinted versions
+    at the exact same dimensions."""
+    # Vertical track 14x1: parchment-pressed beige column
+    img = Image.new("RGBA", (14, 1), PARCHMENT_PRESSED)
+    img.save(out("pages/jquery/jScrollPane/images/osx_vertical_track.png"), "PNG")
+
+    # Horizontal track 1x14: same beige row
+    img = Image.new("RGBA", (1, 14), PARCHMENT_PRESSED)
+    img.save(out("pages/jquery/jScrollPane/images/osx_horizontal_track.png"), "PNG")
+
+    # Vertical drag middle 14x1: burgundy column
+    img = Image.new("RGBA", (14, 1), RED_SOFT)
+    img.save(out("pages/jquery/jScrollPane/images/osx_vertical_drag_middle.png"), "PNG")
+
+    # Horizontal drag middle 1x14: same red-soft row
+    img = Image.new("RGBA", (1, 14), RED_SOFT)
+    img.save(out("pages/jquery/jScrollPane/images/osx_horizontal_drag_middle.png"), "PNG")
+
+    # Vertical drag top/bottom caps 14x11: rounded burgundy
+    for name, flip in [("top", False), ("bottom", True)]:
+        cap = Image.new("RGBA", (14, 11), (0, 0, 0, 0))
+        d = ImageDraw.Draw(cap)
+        if not flip:
+            d.rounded_rectangle((0, 0, 13, 14), radius=5, fill=RED_SOFT)
+        else:
+            d.rounded_rectangle((0, -3, 13, 10), radius=5, fill=RED_SOFT)
+        cap.save(out(f"pages/jquery/jScrollPane/images/osx_vertical_drag_{name}.png"), "PNG")
+
+    # Horizontal drag left/right caps 11x14
+    for name, flip in [("left", False), ("right", True)]:
+        cap = Image.new("RGBA", (11, 14), (0, 0, 0, 0))
+        d = ImageDraw.Draw(cap)
+        if not flip:
+            d.rounded_rectangle((0, 0, 14, 13), radius=5, fill=RED_SOFT)
+        else:
+            d.rounded_rectangle((-3, 0, 10, 13), radius=5, fill=RED_SOFT)
+        cap.save(out(f"pages/jquery/jScrollPane/images/osx_horizontal_drag_{name}.png"), "PNG")
+
+    # Vertical arrows 15x54: small burgundy triangle on parchment
+    for name, direction in [("up", "up"), ("down", "down")]:
+        arrow = Image.new("RGBA", (15, 54), PARCHMENT_PRESSED)
+        d = ImageDraw.Draw(arrow)
+        cx, cy = 7, 27
+        if direction == "up":
+            d.polygon([(cx, cy - 4), (cx - 4, cy + 4), (cx + 4, cy + 4)], fill=RED)
+        else:
+            d.polygon([(cx, cy + 4), (cx - 4, cy - 4), (cx + 4, cy - 4)], fill=RED)
+        arrow.save(out(f"pages/jquery/jScrollPane/images/osx_vertical_arrow_{name}.png"), "PNG")
+
+    # Horizontal arrows 54x15
+    for name, direction in [("left", "left"), ("right", "right")]:
+        arrow = Image.new("RGBA", (54, 15), PARCHMENT_PRESSED)
+        d = ImageDraw.Draw(arrow)
+        cx, cy = 27, 7
+        if direction == "left":
+            d.polygon([(cx - 4, cy), (cx + 4, cy - 4), (cx + 4, cy + 4)], fill=RED)
+        else:
+            d.polygon([(cx + 4, cy), (cx - 4, cy - 4), (cx - 4, cy + 4)], fill=RED)
+        arrow.save(out(f"pages/jquery/jScrollPane/images/osx_horizontal_arrow_{name}.png"), "PNG")
+
+    print("  jspane   12 jScrollPane sprites (Colony tinted)")
+
+
 def gen_body_bg():
     """1x768 vertical strip used as body background repeat-x. Warm beige
     (PARCHMENT_SOFT) so the body matches the panels and side-status."""
@@ -576,6 +641,7 @@ def main():
     gen_panel_backgrounds()
     gen_alert_panels()
     gen_alert_icons()
+    gen_jscrollpane_assets()
 
     total = sum(1 for _ in OUT_ROOT.rglob("*.png"))
     print(f"\nDone. {total} PNG files under {OUT_ROOT}")

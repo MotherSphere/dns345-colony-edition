@@ -113,9 +113,10 @@ h5, H5 {
     color: var(--colony-ink) !important;
 }
 
-/* Same inline-style fight for Recent Activities scrollable area */
+/* Same inline-style fight for Recent Activities scrollable area.
+   Match the body warm beige so the panel reads as one continuous canvas. */
 .scroll-pane {
-    background: var(--colony-parchment) !important;
+    background: var(--colony-parchment-soft) !important;
     color: var(--colony-ink) !important;
 }
 
