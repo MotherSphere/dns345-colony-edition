@@ -231,8 +231,11 @@ def gen_close_button():
 def gen_login_panel():
     """The 383x325 'login.png' contains the dim "Login" watermark + the grey
     metallic panel in a single composite image. We replace with a small
-    "Login" watermark at the very top and a tall parchment panel taking up
+    "Login" watermark at the very top and a tall warm-beige panel taking up
     most of the image, so the form content fits inside the visible box.
+
+    Uses PARCHMENT_SOFT (warm beige) for the fill so the panel matches the
+    body background instead of looking like a white card on beige.
     """
     rel = "pages/images/login.png"
     w, h = 383, 325
@@ -248,7 +251,7 @@ def gen_login_panel():
     d.rounded_rectangle(
         (3, panel_top, w - 4, h - 4),
         radius=8,
-        fill=PARCHMENT,
+        fill=PARCHMENT_SOFT,
         outline=RED,
         width=2,
     )
@@ -280,9 +283,9 @@ def gen_alert_panels():
     for rel, (w, h) in panels.items():
         img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
-        # parchment panel with burgundy border and rounded corners
+        # warm beige panel with burgundy border and rounded corners
         d.rounded_rectangle((0, 0, w - 1, h - 1), radius=6,
-                            fill=PARCHMENT, outline=RED, width=2)
+                            fill=PARCHMENT_SOFT, outline=RED, width=2)
         # subtle inner shadow for depth
         d.rounded_rectangle((2, 2, w - 3, h - 3), radius=5,
                             outline=(46, 26, 20, 25), width=1)
@@ -336,9 +339,10 @@ def gen_alert_icons():
 
 
 def gen_body_bg():
-    """1x768 vertical strip used as body background repeat-x. Simple parchment."""
+    """1x768 vertical strip used as body background repeat-x. Warm beige
+    (PARCHMENT_SOFT) so the body matches the panels and side-status."""
     rel = "pages/images/bg.png"
-    img = Image.new("RGB", (1, 768), (255, 252, 242))
+    img = Image.new("RGB", (1, 768), (247, 237, 217))  # PARCHMENT_SOFT
     img.save(out(rel), "PNG", optimize=True)
     print(f"  body_bg  1x768    {rel}")
 
@@ -347,10 +351,10 @@ def gen_pop_bg():
     """Modal popup background - 4x550 tile, repeats horizontally.
 
     D-Link uses repeat-x so the *width* is small and the *height* covers
-    the popup. We provide a parchment vertical strip.
+    the popup. We provide a warm beige vertical strip (PARCHMENT_SOFT).
     """
     rel = "pages/images/pop_bg.png"
-    img = parchment_fill(4, 550, base=PARCHMENT, vignette=False)
+    img = parchment_fill(4, 550, base=PARCHMENT_SOFT, vignette=False)
     img.save(out(rel), "PNG", optimize=True)
     print(f"  pop_bg   4x550    {rel}")
 
