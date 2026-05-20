@@ -1,0 +1,404 @@
+/* Colony Edition theme for gitweb.
+ *
+ * Bind-mounted over /ffp/share/gitweb/static/gitweb.css by colony.sh.
+ * Uses the canonical Colony palette inline (gitweb is a separate page
+ * tree from D-Link's web UI; we don't have access to the colony-tokens
+ * CSS variables defined for the main NAS pages).
+ */
+
+:root {
+    --c-ink:            rgb(46, 26, 20);
+    --c-ink-dim:        rgb(102, 66, 51);
+    --c-ink-vd:         rgba(140, 107, 82, 0.95);
+    --c-red:            rgb(125, 35, 51);
+    --c-red-soft:       rgba(125, 35, 51, 0.30);
+    --c-red-vs:         rgba(125, 35, 51, 0.12);
+    --c-parchment:      rgb(255, 252, 242);
+    --c-parchment-h:    rgb(252, 239, 219);
+    --c-parchment-p:    rgb(242, 225, 199);
+    --c-parchment-s:    rgb(247, 237, 217);
+    --c-parchment-sh:   rgba(46, 26, 20, 0.08);
+    color-scheme: light;
+}
+
+/* === Base === */
+
+body {
+    font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", Consolas, monospace !important;
+    font-size: 13px;
+    color: var(--c-ink);
+    background: var(--c-parchment-s);
+    margin: 0;
+    padding: 24px 32px;
+}
+
+a {
+    color: var(--c-red);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--c-ink);
+    text-decoration: underline;
+}
+
+a:visited {
+    color: var(--c-red);
+}
+
+/* === Page header (top bar with "colony git / repo.git / summary") === */
+
+div.page_header {
+    background: var(--c-parchment);
+    color: var(--c-ink);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 14px 20px;
+    margin: -24px -32px 0;
+    border-bottom: 2px solid var(--c-red);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+div.page_header a {
+    color: var(--c-red);
+    font-weight: 600;
+}
+
+div.page_header a.header,
+div.page_header > a:first-child {
+    color: var(--c-red);
+    font-size: 20px;
+    letter-spacing: 0.1em;
+}
+
+div.page_header img.logo,
+img.logo {
+    display: none;  /* hide the default git logo, we use text branding */
+}
+
+/* === Page nav (summary | shortlog | log | tree | commit) === */
+
+div.page_nav {
+    background: var(--c-parchment);
+    padding: 10px 20px;
+    margin: 0 -32px 16px;
+    border-bottom: 1px solid var(--c-parchment-p);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+}
+
+div.page_nav a {
+    color: var(--c-ink-dim);
+    padding: 4px 8px;
+    border-radius: 3px;
+    margin: 0 2px;
+}
+
+div.page_nav a:hover {
+    background: var(--c-red-vs);
+    color: var(--c-ink);
+    text-decoration: none;
+}
+
+div.page_path {
+    padding: 8px 0;
+    color: var(--c-ink-dim);
+    font-style: italic;
+}
+
+/* === Search box === */
+
+div.page_nav input[type="text"] {
+    background: var(--c-parchment);
+    color: var(--c-ink);
+    border: 1px solid var(--c-ink-vd);
+    border-radius: 3px;
+    padding: 3px 6px;
+    font-family: inherit;
+}
+
+div.page_nav input[type="text"]:focus {
+    outline: none;
+    border-color: var(--c-red);
+    box-shadow: 0 0 0 2px var(--c-red-vs);
+}
+
+div.page_nav select {
+    background: var(--c-parchment);
+    color: var(--c-ink);
+    border: 1px solid var(--c-ink-vd);
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-family: inherit;
+}
+
+/* === Section titles (shortlog, heads, tree, etc) === */
+
+div.title,
+div.title a {
+    background: var(--c-red) !important;
+    color: var(--c-parchment) !important;
+    padding: 8px 14px !important;
+    margin: 16px 0 0 !important;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 4px 4px 0 0;
+    font-size: 12px;
+}
+
+div.title_text {
+    background: var(--c-red);
+    color: var(--c-parchment);
+    padding: 8px 14px;
+    margin: 16px 0 0;
+}
+
+/* === Tables (shortlog, project list, tree, diff stats) === */
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--c-parchment);
+    margin: 0 0 16px;
+    border: 1px solid var(--c-parchment-p);
+    border-radius: 0 0 4px 4px;
+    overflow: hidden;
+}
+
+table th {
+    background: var(--c-parchment-p);
+    color: var(--c-ink);
+    text-align: left;
+    padding: 6px 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 11px;
+    border-bottom: 1px solid var(--c-red);
+}
+
+table td {
+    padding: 6px 10px;
+    color: var(--c-ink);
+    border-bottom: 1px solid var(--c-parchment-p);
+    vertical-align: top;
+}
+
+table tr.dark, table tr:nth-child(even) {
+    background: var(--c-parchment-h);
+}
+
+table tr.light, table tr:nth-child(odd) {
+    background: var(--c-parchment);
+}
+
+table tr:hover td {
+    background: var(--c-red-vs) !important;
+}
+
+table td.age, table td.noage {
+    color: var(--c-ink-dim);
+    font-style: italic;
+    white-space: nowrap;
+    font-size: 11px;
+}
+
+table td.current_head {
+    font-weight: 600;
+}
+
+/* === Author / commit author cells === */
+
+i {
+    color: var(--c-ink-dim);
+    font-style: normal;
+}
+
+table td i {
+    color: var(--c-ink);
+    font-style: normal;
+}
+
+/* === Action links per row (commit | commitdiff | tree | snapshot) === */
+
+td.link, td.link a, span.link, span.refs a {
+    color: var(--c-red);
+    font-size: 11px;
+}
+
+a.list, a.list:visited {
+    color: var(--c-red);
+    font-weight: 500;
+}
+
+a.list:hover {
+    text-decoration: underline;
+}
+
+/* === Branch / tag refs badges === */
+
+span.refs span,
+span.refs a,
+.refs .head, .refs .tag, .refs .remote {
+    background: var(--c-red);
+    color: var(--c-parchment);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    margin-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+span.refs span.head {
+    background: var(--c-ink);
+}
+
+/* === Commit message page === */
+
+div.header {
+    background: var(--c-parchment);
+    color: var(--c-ink);
+    padding: 8px 12px;
+    border-left: 3px solid var(--c-red);
+    margin: 8px 0;
+    font-weight: 500;
+}
+
+div.log_link {
+    color: var(--c-ink-dim);
+    font-size: 11px;
+}
+
+div.commit_msg, pre.diff {
+    background: var(--c-parchment);
+    color: var(--c-ink);
+    padding: 12px 16px;
+    border: 1px solid var(--c-parchment-p);
+    border-radius: 4px;
+    font-family: inherit;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+/* === Diff view === */
+
+div.diff.add, div.diff.add a, span.diff.add {
+    background: rgba(60, 100, 50, 0.10);
+    color: rgb(60, 100, 50);
+}
+
+div.diff.rem, div.diff.rem a, span.diff.rem {
+    background: var(--c-red-vs);
+    color: var(--c-red);
+}
+
+div.diff.add_line, .add {
+    background: rgba(60, 100, 50, 0.10);
+    color: rgb(40, 80, 30);
+}
+
+div.diff.rem_line, .rem {
+    background: var(--c-red-vs);
+    color: var(--c-red);
+}
+
+div.diff_info {
+    background: var(--c-parchment-p);
+    color: var(--c-ink);
+    padding: 4px 12px;
+    font-weight: 500;
+    border-radius: 3px;
+    margin: 8px 0 4px;
+}
+
+div.diff.extended_header, div.diff.from_file, div.diff.to_file {
+    background: var(--c-parchment-h);
+    color: var(--c-ink-dim);
+    padding: 2px 8px;
+    font-size: 11px;
+    border-left: 2px solid var(--c-ink-vd);
+}
+
+/* === File / blob view === */
+
+div.pre, pre {
+    background: var(--c-parchment);
+    color: var(--c-ink);
+    padding: 12px 16px;
+    border: 1px solid var(--c-parchment-p);
+    border-radius: 4px;
+    font-family: inherit;
+    line-height: 1.5;
+    overflow-x: auto;
+}
+
+/* === Footer === */
+
+div.page_footer {
+    background: var(--c-parchment);
+    color: var(--c-ink-vd);
+    padding: 10px 20px;
+    margin: 24px -32px 0;
+    border-top: 1px solid var(--c-parchment-p);
+    font-size: 11px;
+    text-align: center;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+div.page_footer_text {
+    color: var(--c-ink-dim);
+    font-style: normal;
+}
+
+/* === Atom/RSS feed buttons === */
+
+a.rss_logo {
+    background: var(--c-red) !important;
+    color: var(--c-parchment) !important;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    border: none !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-left: 6px;
+}
+
+a.rss_logo:hover {
+    background: rgb(150, 45, 62) !important;
+    color: var(--c-parchment) !important;
+    text-decoration: none;
+}
+
+/* === Misc === */
+
+hr {
+    border: none;
+    border-top: 1px solid var(--c-parchment-p);
+    margin: 16px 0;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+    background: var(--c-parchment-s);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--c-red-soft);
+    border-radius: 5px;
+    border: 2px solid var(--c-parchment-s);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--c-red);
+}
+* {
+    scrollbar-color: var(--c-red-soft) var(--c-parchment-p);
+    scrollbar-width: thin;
+}
