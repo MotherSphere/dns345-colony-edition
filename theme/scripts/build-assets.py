@@ -228,6 +228,49 @@ def gen_close_button():
         print(f"  close    32x35    {rel}  hover={hover}")
 
 
+def gen_login_panel():
+    """The 383x325 'login.png' contains the dim "Login" watermark + the grey
+    metallic panel in a single composite image. We replace with a small
+    "Login" watermark at the very top and a tall parchment panel taking up
+    most of the image, so the form content fits inside the visible box.
+    """
+    rel = "pages/images/login.png"
+    w, h = 383, 325
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+
+    # Compact "Login" watermark in upper-left corner, leaves room for the panel
+    title_font = ImageFont.truetype(str(FONT_BOLD), 40)
+    d.text((6, 0), "Login", font=title_font, fill=(125, 35, 51, 90))
+
+    # Panel covers most of the image: starts just below watermark, ends at bottom
+    panel_top = 48
+    d.rounded_rectangle(
+        (3, panel_top, w - 4, h - 4),
+        radius=8,
+        fill=PARCHMENT,
+        outline=RED,
+        width=2,
+    )
+    # Subtle inner shadow for depth
+    d.rounded_rectangle(
+        (5, panel_top + 2, w - 6, h - 6),
+        radius=7,
+        outline=(46, 26, 20, 25),
+        width=1,
+    )
+    img.save(out(rel), "PNG", optimize=True)
+    print(f"  login    {w:>3}x{h:<3}  {rel}  (panel + watermark)")
+
+
+def gen_body_bg():
+    """1x768 vertical strip used as body background repeat-x. Simple parchment."""
+    rel = "pages/images/bg.png"
+    img = Image.new("RGB", (1, 768), (255, 252, 242))
+    img.save(out(rel), "PNG", optimize=True)
+    print(f"  body_bg  1x768    {rel}")
+
+
 def gen_pop_bg():
     """Modal popup background - 4x550 tile, repeats horizontally.
 
@@ -446,6 +489,8 @@ def main():
     gen_buttons()
     gen_login_button()
     gen_menu_top_button()
+    gen_login_panel()
+    gen_body_bg()
     gen_close_button()
     gen_pop_bg()
     gen_logos()

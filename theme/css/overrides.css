@@ -221,6 +221,43 @@ input[type="radio"] {
 }
 
 /* =========================================================================
+   8b. Sprite-backed buttons - fix text color
+   D-Link's button_style.css sets color:#fff on every button class because
+   the original PNG sprites have dark blue backgrounds. Our replacement
+   sprites have parchment backgrounds, so white text vanishes. Force ink
+   for all of them, except the primary action which becomes parchment-on-
+   burgundy via the .button_min ._text rule below.
+   ========================================================================= */
+
+.button,
+.button_min,
+.button_medium,
+.button_large,
+.button_max,
+.button_max_generic,
+.button_max_wizard,
+.button_new,
+.button_login,
+.menu_off,
+.menu_on,
+.menu_on span,
+.menu_hover {
+    color: var(--colony-ink) !important;
+    font-family: var(--colony-font-display) !important;
+    font-weight: var(--colony-fw-semibold) !important;
+}
+
+/* Display variants are disabled-state */
+.button_display,
+.button_min_display,
+.button_medium_display,
+.button_large_display,
+.button_max_display,
+.button_max_generic_display {
+    color: var(--colony-ink-very-dim) !important;
+}
+
+/* =========================================================================
    9. Apply buttons (small text-only variants)
    ========================================================================= */
 
@@ -341,6 +378,58 @@ input[type="radio"] {
 }
 ::-webkit-scrollbar-thumb:hover {
     background: var(--colony-red);
+}
+
+/* =========================================================================
+   13b. Login page specifics
+   The .login class has background-image: url(/web/images/login.png) set in
+   an inline <style> in login.html. We replace that PNG via bind-mount
+   (parchment panel + burgundy "Login" watermark in a single image).
+   Here we just ensure spacing and text colors play well with the new bg.
+   ========================================================================= */
+
+.login {
+    padding-top: 60px !important;       /* below the compact watermark */
+    height: auto !important;            /* let it grow if monospace text wraps */
+    min-height: 325px;
+    color: var(--colony-ink) !important;
+}
+
+/* The submit_but div is positioned with top:50px which used to leave it
+   below the panel. Pull it back so it sits inside the parchment. */
+#submit_but.submit_but {
+    top: 10px !important;
+}
+
+#id_warn {
+    color: var(--colony-red) !important;
+    background: var(--colony-red-very-soft);
+    padding: 4px 8px;
+    border-left: 3px solid var(--colony-red);
+    border-radius: var(--colony-radius-input);
+    margin-top: 6px;
+}
+
+/* The "Please Select Your Account" heading inside the login box */
+.login b,
+.login font {
+    color: var(--colony-ink) !important;
+    font-family: var(--colony-font-display) !important;
+}
+
+/* JetBrainsMono is wider than Tahoma so D-Link's hardcoded 12pt labels
+   wrap onto multiple lines. Force single-line for short form labels. */
+.login label,
+.login label font,
+.login label span {
+    white-space: nowrap !important;
+    font-size: 13px !important;
+}
+
+/* Same for the main heading - keep "Please Select Your Account:" on one line */
+.login b font,
+.login td > b {
+    font-size: 14pt !important;
 }
 
 /* =========================================================================
