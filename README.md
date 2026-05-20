@@ -117,14 +117,25 @@ Font: **JetBrainsMono Nerd Font** across the board, weights 300-700.
 
 - [x] Palette extracted from H&E + SAM Colony Edition (single source of truth)
 - [x] Repo scaffolded
-- [ ] D-Link squashfs extracted and catalogued
-- [ ] Selector map (which D-Link classes need overriding)
-- [ ] `theme/css/overrides.css` first draft
-- [ ] Bind-mount script `module/scripts/colony.sh`
-- [ ] D-Link `.module` format reverse-engineered
-- [ ] `build.sh` produces a working `dns345-colony-edition.module`
-- [ ] Tested end-to-end on a real DNS-345
+- [x] D-Link squashfs extracted and catalogued (`docs/dlink-ui-catalogue.md`)
+- [x] Selector map drafted from extracted CSS
+- [x] `theme/css/overrides.css` (250 lines, real selectors)
+- [x] `theme/scripts/build-assets.py` generates 48 Colony PNG sprites
+- [x] Bind-mount script `module/scripts/colony.sh` (idempotent, with stop/status)
+- [x] `build.sh` produces a working `dns345-colony-edition.module`
+- [x] Tested end-to-end on a real DNS-345 (login, home, management all work)
+- [ ] `.module` format empirically validated against D-Link's Add-Ons UI (currently installs cleanly via manual SSH)
+- [ ] Polish: overlay `pages/images/setup_wizard.png` + the small icons for My Photos/Files/Music/Cloud
 - [ ] Released as v0.1.0
+
+## Screenshots (v0.1.0-dev, manual SSH install)
+
+| Before (D-Link) | After (Colony) |
+|---|---|
+| dark header, grey gradient, Tahoma | parchment, JetBrainsMono, burgundy accents |
+
+See `docs/screenshot-login.png`, `docs/screenshot-home.png`,
+`docs/screenshot-management.png` for the current look.
 
 ## Compatibility
 

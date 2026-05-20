@@ -45,13 +45,27 @@ echo "[1/4] Staging payload"
 # 1a. Overlay tree mirrors /usr/local/modules/web/ paths under /ffp/colony/overlay/
 cp -r "$REPO/theme/assets/"* "$PAYLOAD/ffp/colony/overlay/"
 
-# 1b. Ship our CSS as a bind-mount target. Note: the actual bind happens at
-# runtime, here we just place the file so the boot hook can find it.
+# 1b. Ship our CSS as a bind-mount target. The bind replaces D-Link's
+# style.css entirely, so we must concatenate the ORIGINAL D-Link CSS
+# (preserved from extracted/) with our Colony tokens + overrides. If we
+# only ship overrides, the page loses all D-Link layout rules and breaks.
 mkdir -p "$PAYLOAD/ffp/colony/overlay/pages/css"
-# Concatenate tokens + overrides into one file the bind-mount can point at.
+
+DLINK_STYLE="$REPO/extracted/web/pages/css/style.css"
+if [ ! -f "$DLINK_STYLE" ]; then
+    echo "ERROR: missing $DLINK_STYLE" >&2
+    echo "Run scripts/extract-dlink-ui.sh first (requires SSH access to the NAS)." >&2
+    exit 1
+fi
+
 {
+    echo "/* === D-LINK STOCK style.css (vendored from firmware 1.05, preserved verbatim) === */"
+    cat "$DLINK_STYLE"
+    echo ""
+    echo "/* === COLONY EDITION tokens === */"
     cat "$REPO/theme/css/colony-tokens.css"
     echo ""
+    echo "/* === COLONY EDITION overrides (must come last to win by source order) === */"
     cat "$REPO/theme/css/overrides.css"
 } > "$PAYLOAD/ffp/colony/overlay/pages/css/style.css"
 
