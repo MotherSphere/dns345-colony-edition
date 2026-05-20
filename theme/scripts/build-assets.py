@@ -263,6 +263,78 @@ def gen_login_panel():
     print(f"  login    {w:>3}x{h:<3}  {rel}  (panel + watermark)")
 
 
+def gen_alert_panels():
+    """jQuery jAlert popup background panels.
+
+    D-Link's stock images are metallic-grey gradient panels. We replace
+    with parchment + burgundy border, matching the in-page wizard look.
+    """
+    panels = {
+        "pages/jquery/alerts/images/alert_s.png":  (420, 155),
+        "pages/jquery/alerts/images/alert_m.png":  (480, 155),
+        "pages/jquery/alerts/images/alert_l.png":  (555, 155),
+        "pages/jquery/alerts/images/alert_ll.png": (600, 155),
+        "pages/jquery/alerts/images/alert_xl.png": (600, 180),
+        "pages/jquery/alerts/images/alert_bg.png": (414, 270),
+    }
+    for rel, (w, h) in panels.items():
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        # parchment panel with burgundy border and rounded corners
+        d.rounded_rectangle((0, 0, w - 1, h - 1), radius=6,
+                            fill=PARCHMENT, outline=RED, width=2)
+        # subtle inner shadow for depth
+        d.rounded_rectangle((2, 2, w - 3, h - 3), radius=5,
+                            outline=(46, 26, 20, 25), width=1)
+        # burgundy title strip across the top (24px)
+        d.rounded_rectangle((4, 4, w - 5, 28), radius=4,
+                            fill=RED)
+        img.save(out(rel), "PNG", optimize=True)
+        print(f"  alert    {w:>3}x{h:<3}  {rel}")
+
+
+def gen_alert_icons():
+    """The 50x60 icons inside jAlert popups.
+
+    Drawn as PIL vectors so we don't need a fancy icon font. All in
+    burgundy on parchment, label glyph in parchment so it pops.
+    """
+    iconw, iconh = 50, 60
+    icons = {
+        "error":   "!",
+        "confirm": "?",
+        "info":    "i",
+        "ok":      "Y",   # checkmark-ish — we'll draw a real tick instead
+    }
+    for kind, _placeholder in icons.items():
+        rel = f"pages/jquery/alerts/images/{kind}.png"
+        img = Image.new("RGBA", (iconw, iconh), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+
+        # Circle background
+        cx, cy = iconw // 2, iconh // 2 + 2
+        r = 22
+        d.ellipse((cx - r, cy - r, cx + r, cy + r),
+                  fill=RED, outline=INK, width=2)
+
+        # Glyph
+        if kind == "ok":
+            # Draw a checkmark
+            d.line([(cx - 9, cy + 1), (cx - 3, cy + 8), (cx + 11, cy - 8)],
+                   fill=PARCHMENT, width=4)
+        else:
+            glyph_font = ImageFont.truetype(str(FONT_BOLD), 28)
+            text = {"error": "!", "confirm": "?", "info": "i"}[kind]
+            bbox = d.textbbox((0, 0), text, font=glyph_font)
+            tw = bbox[2] - bbox[0]; th = bbox[3] - bbox[1]
+            tx = cx - tw // 2 - bbox[0]
+            ty = cy - th // 2 - bbox[1]
+            d.text((tx, ty), text, font=glyph_font, fill=PARCHMENT)
+
+        img.save(out(rel), "PNG", optimize=True)
+        print(f"  alert ic  50x60   {rel}")
+
+
 def gen_body_bg():
     """1x768 vertical strip used as body background repeat-x. Simple parchment."""
     rel = "pages/images/bg.png"
@@ -498,6 +570,8 @@ def main():
     gen_menu_icons()
     gen_logout_icon()
     gen_panel_backgrounds()
+    gen_alert_panels()
+    gen_alert_icons()
 
     total = sum(1 for _ in OUT_ROOT.rglob("*.png"))
     print(f"\nDone. {total} PNG files under {OUT_ROOT}")

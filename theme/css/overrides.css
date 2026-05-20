@@ -225,6 +225,37 @@ input[type="radio"] {
     box-shadow: 0 12px 40px var(--colony-parchment-shadow) !important;
 }
 
+/* jQuery jAlert popups (User timeout, confirmations, etc).
+   The bg images are bind-mount-replaced; we fix text colors here.
+   alert_m.png / alert_xl.png etc are now parchment with a burgundy
+   title strip, so text inside should be ink. */
+.alert_overlay,
+.alert_overlay_XL,
+div.alert_overlay,
+div.alert_overlay_XL,
+#alert_overlay,
+#popup_message {
+    color: var(--colony-ink) !important;
+    font-family: var(--colony-font-body) !important;
+}
+
+/* The popup confirm buttons (Yes/No) - same Colony button treatment */
+#popup_ok, #popup_ok2,
+#popup_cancel, #popup_cancel2,
+.button.popup {
+    background-color: var(--colony-parchment-hover) !important;
+    color: var(--colony-ink) !important;
+    border: var(--colony-border-thin) solid var(--colony-red) !important;
+    border-radius: var(--colony-radius-input) !important;
+    font-family: var(--colony-font-display) !important;
+    font-weight: var(--colony-fw-medium) !important;
+}
+
+#popup_ok:hover, #popup_ok2:hover {
+    background-color: var(--colony-red) !important;
+    color: var(--colony-parchment) !important;
+}
+
 /* =========================================================================
    8. Accordion (used in Disk Management etc.)
    ========================================================================= */
