@@ -87,13 +87,40 @@ h5, H5 {
    D-Link assumes dark gray panel; we have parchment now.
    ========================================================================= */
 
-.device_status,
+.device_status {
+    /* home.html has an inline <style> setting background:#000000 — we beat
+       it with !important. The bind-mounted lbox_bg.jpg still loads as the
+       bg image on the .device_status with the catalogue color. */
+    background: var(--colony-parchment-soft) !important;
+    background-image: url('/web/images/lbox_bg.jpg') !important;
+    color: var(--colony-ink) !important;
+    border-left: var(--colony-border-panel) solid var(--colony-red) !important;
+}
+
 .volume_info,
 .v_name,
 .size_info,
 .p_size,
 #title,
 #comment {
+    color: var(--colony-ink) !important;
+}
+
+/* Same inline-style fight for Recent Activities scrollable area */
+.scroll-pane {
+    background: var(--colony-parchment) !important;
+    color: var(--colony-ink) !important;
+}
+
+.holder .jScrollPaneTrack {
+    background: var(--colony-parchment-pressed) !important;
+}
+
+.holder .jScrollPaneDrag {
+    background: var(--colony-red-soft) !important;
+}
+
+.holder {
     color: var(--colony-ink) !important;
 }
 
