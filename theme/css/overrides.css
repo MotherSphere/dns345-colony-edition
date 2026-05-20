@@ -1,0 +1,207 @@
+/* Colony Edition overrides for the D-Link DNS-345 web UI.
+ *
+ * This file is loaded AFTER the D-Link stock CSS, so its rules win by
+ * source order. We use Colony tokens defined in colony-tokens.css.
+ *
+ * This is a SKELETON — real D-Link selectors will be filled in once
+ * we've extracted the squashfs and catalogued the actual class names.
+ * Selectors marked /* TBD */ are placeholders.
+ *
+ * Principle: paint over, don't rewire. Functional JS handlers must keep
+ * working untouched; we only repaint colors, fonts, borders, shadows.
+ */
+
+@import url("colony-tokens.css");
+
+/* === Global reset over D-Link === */
+
+body,
+html {
+    font-family: var(--colony-font-body) !important;
+    color: var(--colony-ink);
+    background: var(--colony-parchment);
+}
+
+/* === Top header bar === */
+
+#header,                /* TBD: confirm with extracted UI */
+.top_banner,
+.title_banner {
+    background: var(--colony-parchment-soft) !important;
+    border-bottom: var(--colony-border-panel) solid var(--colony-red);
+    color: var(--colony-ink);
+}
+
+#header img.logo,       /* TBD: actual logo selector */
+.brand_logo {
+    /* Will be overridden by bind-mounting the image file itself in module
+       (logo.png), so CSS doesn't need to do much here. Keep size sane. */
+    max-height: 48px;
+}
+
+/* === Left navigation === */
+
+#left_nav,              /* TBD */
+.menu_container,
+#sub_menu {
+    background: var(--colony-parchment) !important;
+    color: var(--colony-ink);
+    border-right: var(--colony-border-thin) solid var(--colony-parchment-pressed);
+}
+
+#left_nav a,
+#sub_menu li,
+.menu_item {
+    color: var(--colony-ink-dim);
+    border-bottom: var(--colony-border-thin) solid transparent;
+}
+
+#left_nav a:hover,
+#sub_menu li:hover,
+.menu_item:hover {
+    background: var(--colony-red-very-soft) !important;
+    color: var(--colony-ink);
+}
+
+#sub_menu li.sidenavoff, /* observed in real DOM */
+#sub_menu li.selected,
+.menu_item.active {
+    background: var(--colony-red-soft) !important;
+    color: var(--colony-ink);
+    border-left: var(--colony-border-panel) solid var(--colony-red);
+}
+
+/* === Buttons === */
+
+/* D-Link's "button_min" / "button_medium" classes (observed in DOM) */
+.button_min,
+.button_medium,
+.button {
+    background: var(--colony-parchment-hover) !important;
+    color: var(--colony-ink);
+    border: var(--colony-border-thin) solid var(--colony-ink-dim);
+    border-radius: var(--colony-radius-input);
+    font-family: var(--colony-font-body);
+    font-weight: var(--colony-fw-medium);
+    letter-spacing: var(--colony-tracking-wide);
+    text-transform: uppercase;
+}
+
+.button_min:hover,
+.button_medium:hover,
+.button:hover {
+    background: var(--colony-parchment-pressed) !important;
+}
+
+.button_min:active,
+.button_medium:active {
+    background: var(--colony-red-soft) !important;
+}
+
+/* Primary action buttons (Next, Apply, Format, ...) */
+.button_min._text,         /* observed: Next/Format in wizard */
+.button.primary,
+.button_apply,
+#restart_button {
+    background: var(--colony-red) !important;
+    color: var(--colony-parchment);
+    border-color: var(--colony-ink);
+}
+
+.button_min._text:hover,
+.button.primary:hover,
+#restart_button:hover {
+    background: rgb(150, 45, 62) !important; /* slightly lighter red */
+}
+
+/* === Tables === */
+
+table {
+    border-collapse: collapse;
+    background: var(--colony-parchment);
+}
+
+table thead,
+.table_header,
+tr.header {
+    background: var(--colony-parchment-pressed);
+    color: var(--colony-ink);
+    font-weight: var(--colony-fw-semibold);
+    letter-spacing: var(--colony-tracking-wide);
+    text-transform: uppercase;
+}
+
+table tbody tr {
+    border-bottom: var(--colony-border-thin) solid var(--colony-parchment-pressed);
+}
+
+table tbody tr:hover {
+    background: var(--colony-parchment-hover);
+}
+
+/* === Form inputs === */
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+    background: var(--colony-parchment) !important;
+    color: var(--colony-ink);
+    border: var(--colony-border-thin) solid var(--colony-ink-very-dim);
+    border-radius: var(--colony-radius-input);
+    font-family: var(--colony-font-mono);
+    padding: 4px 6px;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--colony-red);
+    box-shadow: 0 0 0 2px var(--colony-red-very-soft);
+}
+
+/* === Wizard / modal dialogs === */
+
+#formatdsk_Diag,             /* observed: RAID setup wizard */
+#shareDiag,
+.diag_container,
+.shareDiag {
+    background: var(--colony-parchment) !important;
+    color: var(--colony-ink);
+    border: var(--colony-border-panel) solid var(--colony-red);
+    border-radius: var(--colony-radius-panel);
+    box-shadow: 0 10px 40px var(--colony-parchment-shadow),
+                0 0 0 9999px rgba(46, 26, 20, 0.4); /* dim background */
+}
+
+.diag_title {
+    background: var(--colony-red);
+    color: var(--colony-parchment);
+    padding: 10px 14px;
+    letter-spacing: var(--colony-tracking-display);
+    text-transform: uppercase;
+    font-weight: var(--colony-fw-semibold);
+    border-radius: var(--colony-radius-panel) var(--colony-radius-panel) 0 0;
+}
+
+/* === Status / notification overlay === */
+
+#alert_overlay {
+    background: var(--colony-parchment) !important;
+    border: var(--colony-border-panel) solid var(--colony-red);
+    color: var(--colony-ink);
+}
+
+/* === Footer === */
+
+#footer,
+.footer {
+    background: var(--colony-parchment-soft);
+    color: var(--colony-ink-very-dim);
+    border-top: var(--colony-border-thin) solid var(--colony-parchment-pressed);
+    font-size: var(--colony-fs-xs);
+}

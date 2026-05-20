@@ -1,0 +1,102 @@
+/* Colony design tokens — parchment + burgundy palette.
+ *
+ * Source of truth: HeavenAndEarth_Godot/client/scripts/ui_style.gd
+ * Ported to CSS first in SAM-Colony-Edition/src/styles/theme.css.
+ * Identical values across all Colony-branded projects.
+ *
+ * DO NOT edit these to taste — these are the canonical brand values.
+ * If you need a new shade, add a new token rather than mutating an
+ * existing one.
+ */
+
+@font-face {
+    font-family: "JetBrainsMono Nerd Font";
+    src: url("../fonts/JetBrainsMonoNerdFont-Light.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "JetBrainsMono Nerd Font";
+    src: url("../fonts/JetBrainsMonoNerdFont-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "JetBrainsMono Nerd Font";
+    src: url("../fonts/JetBrainsMonoNerdFont-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "JetBrainsMono Nerd Font";
+    src: url("../fonts/JetBrainsMonoNerdFont-SemiBold.ttf") format("truetype");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "JetBrainsMono Nerd Font";
+    src: url("../fonts/JetBrainsMonoNerdFont-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    /* === Ink (text + outlines) === */
+    --colony-ink:           rgb(46, 26, 20);          /* #2e1a14 main text */
+    --colony-ink-dim:       rgb(102, 66, 51);         /* #664233 secondary text */
+    --colony-ink-very-dim:  rgba(140, 107, 82, 0.95); /* #8c6b52 placeholders, tertiary */
+
+    /* === Burgundy accent === */
+    --colony-red:           rgb(125, 35, 51);         /* #7d2333 primary action, highlights */
+    --colony-red-soft:      rgba(125, 35, 51, 0.30);  /* tinted backgrounds */
+    --colony-red-very-soft: rgba(125, 35, 51, 0.12);  /* subtle hover */
+
+    /* === Parchment surface ramp === */
+    --colony-parchment:          rgb(255, 252, 242);  /* #fffcf2 base surface */
+    --colony-parchment-hover:    rgb(252, 239, 219);  /* #fcefdb hover */
+    --colony-parchment-pressed:  rgb(242, 225, 199);  /* #f2e1c7 active/pressed */
+    --colony-parchment-disabled: rgba(245, 240, 227, 0.6);
+    --colony-parchment-soft:     rgb(247, 237, 217);  /* #f7edd9 secondary surface */
+    --colony-parchment-shadow:   rgba(46, 26, 20, 0.08);
+
+    /* === Typography === */
+    --colony-font-display: "JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    --colony-font-body:    "JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    --colony-font-mono:    "JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+
+    /* Type scale */
+    --colony-fs-xs:  10px;
+    --colony-fs-sm:  11px;
+    --colony-fs-md:  13px;
+    --colony-fs-lg:  15px;
+    --colony-fs-xl:  20px;
+    --colony-fs-2xl: 26px;
+    --colony-fs-3xl: 34px;
+
+    /* Weight scale */
+    --colony-fw-light:    300;
+    --colony-fw-regular:  400;
+    --colony-fw-medium:   500;
+    --colony-fw-semibold: 600;
+    --colony-fw-bold:     700;
+
+    /* Letter spacing */
+    --colony-tracking-tight:   -0.01em;
+    --colony-tracking-normal:   0;
+    --colony-tracking-wide:     0.06em;
+    --colony-tracking-display:  0.14em;
+
+    /* Geometry */
+    --colony-radius-input: 3px;
+    --colony-radius-card:  4px;
+    --colony-radius-panel: 6px;
+    --colony-border-thin:  1px;
+    --colony-border-panel: 2px;
+
+    color-scheme: light;
+}
