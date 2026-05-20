@@ -28,8 +28,15 @@ h1, h2, h3, h4, h5, h6, td, th, input, select, textarea, button {
 }
 
 html, body {
-    background: var(--colony-parchment) !important;
+    /* Use the warmer parchment-soft as the body background so the main
+       canvas matches the Storage Status / Recent Activities side panel
+       beige, instead of the lighter cream which read as "white" against
+       the warmer panels. */
+    background: var(--colony-parchment-soft) !important;
     color: var(--colony-ink) !important;
+    /* Firefox scrollbar styling (the standard "scrollbar-*" props). */
+    scrollbar-color: var(--colony-red-soft) var(--colony-parchment-pressed);
+    scrollbar-width: thin;
 }
 
 /* H5 in stock CSS is white-on-#333333 (used for section headers).
@@ -422,20 +429,38 @@ div.alert_overlay_XL,
     background-color: var(--colony-red-soft) !important;
 }
 
-/* Native overflow scrollbars (modern browsers) */
+/* Native overflow scrollbars - WebKit/Blink (Chrome, Edge, Safari) */
 ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
+    background: var(--colony-parchment-soft);
 }
 ::-webkit-scrollbar-track {
-    background: var(--colony-parchment-soft);
+    background: var(--colony-parchment-pressed);
 }
 ::-webkit-scrollbar-thumb {
     background: var(--colony-red-soft);
     border-radius: 5px;
+    border: 2px solid var(--colony-parchment-soft);
 }
 ::-webkit-scrollbar-thumb:hover {
     background: var(--colony-red);
+}
+::-webkit-scrollbar-corner {
+    background: var(--colony-parchment-soft);
+}
+
+/* Native overflow scrollbars - Firefox uses standard CSS props.
+   Apply to ALL elements that might scroll so .scroll-pane, iframes,
+   and the body itself all get the Colony scrollbar. */
+*,
+*::before,
+*::after,
+.scroll-pane,
+.holder,
+iframe {
+    scrollbar-color: var(--colony-red-soft) var(--colony-parchment-pressed);
+    scrollbar-width: thin;
 }
 
 /* =========================================================================
