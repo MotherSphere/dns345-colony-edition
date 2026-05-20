@@ -1,207 +1,362 @@
-/* Colony Edition overrides for the D-Link DNS-345 web UI.
+/* Colony Edition overrides for the D-Link DNS-345 web UI (firmware 1.05).
  *
- * This file is loaded AFTER the D-Link stock CSS, so its rules win by
- * source order. We use Colony tokens defined in colony-tokens.css.
+ * Loaded AFTER D-Link's stock CSS via bind-mount over /web/pages/css/style.css.
+ * The original style.css content is preserved at the top of the bind-mounted
+ * file by build.sh — these rules append after it so they win by source order.
  *
- * This is a SKELETON — real D-Link selectors will be filled in once
- * we've extracted the squashfs and catalogued the actual class names.
- * Selectors marked /* TBD */ are placeholders.
+ * Key insight: most BUTTON visuals come from PNG sprites (replaced separately
+ * by the bind-mount overlay tree). This file mostly handles:
+ *   - global font/typography swap (Tahoma -> JetBrainsMono)
+ *   - text color overrides (D-Link assumes dark bg + light text; we have
+ *     parchment bg now so text needs to be ink-dark)
+ *   - form input restyling (no PNG sprites involved)
+ *   - subtle border/shadow embellishments
  *
- * Principle: paint over, don't rewire. Functional JS handlers must keep
- * working untouched; we only repaint colors, fonts, borders, shadows.
+ * Selectors are taken from the real CSS extracted from the firmware. See
+ * docs/dlink-ui-catalogue.md for the full inventory.
  */
 
 @import url("colony-tokens.css");
 
-/* === Global reset over D-Link === */
+/* =========================================================================
+   1. Global reset
+   ========================================================================= */
 
-body,
-html {
+html, body, div, p, ul, ol, li, dl, dt, dd,
+h1, h2, h3, h4, h5, h6, td, th, input, select, textarea, button {
     font-family: var(--colony-font-body) !important;
-    color: var(--colony-ink);
-    background: var(--colony-parchment);
 }
 
-/* === Top header bar === */
-
-#header,                /* TBD: confirm with extracted UI */
-.top_banner,
-.title_banner {
-    background: var(--colony-parchment-soft) !important;
-    border-bottom: var(--colony-border-panel) solid var(--colony-red);
-    color: var(--colony-ink);
-}
-
-#header img.logo,       /* TBD: actual logo selector */
-.brand_logo {
-    /* Will be overridden by bind-mounting the image file itself in module
-       (logo.png), so CSS doesn't need to do much here. Keep size sane. */
-    max-height: 48px;
-}
-
-/* === Left navigation === */
-
-#left_nav,              /* TBD */
-.menu_container,
-#sub_menu {
+html, body {
     background: var(--colony-parchment) !important;
-    color: var(--colony-ink);
-    border-right: var(--colony-border-thin) solid var(--colony-parchment-pressed);
+    color: var(--colony-ink) !important;
 }
 
-#left_nav a,
-#sub_menu li,
-.menu_item {
-    color: var(--colony-ink-dim);
-    border-bottom: var(--colony-border-thin) solid transparent;
+/* H5 in stock CSS is white-on-#333333 (used for section headers).
+   Recolor to parchment-on-burgundy for the same hierarchy effect. */
+h5, H5 {
+    background-color: var(--colony-red) !important;
+    color: var(--colony-parchment) !important;
+    letter-spacing: var(--colony-tracking-display) !important;
+    text-transform: uppercase !important;
+    font-weight: var(--colony-fw-semibold) !important;
 }
 
-#left_nav a:hover,
-#sub_menu li:hover,
-.menu_item:hover {
-    background: var(--colony-red-very-soft) !important;
-    color: var(--colony-ink);
+/* =========================================================================
+   2. Top navigation (.menu_on / .menu_off / .menu_hover)
+   The PNG backgrounds are replaced via bind-mount; we just fix the text.
+   ========================================================================= */
+
+.menu_on,
+.menu_on span,
+.menu_off,
+.menu_hover {
+    color: var(--colony-ink) !important;
+    font-family: var(--colony-font-display) !important;
+    letter-spacing: var(--colony-tracking-wide) !important;
+    font-weight: var(--colony-fw-medium) !important;
 }
 
-#sub_menu li.sidenavoff, /* observed in real DOM */
-#sub_menu li.selected,
-.menu_item.active {
-    background: var(--colony-red-soft) !important;
-    color: var(--colony-ink);
-    border-left: var(--colony-border-panel) solid var(--colony-red);
+.menu_on,
+.menu_on span {
+    color: var(--colony-red) !important;
+    font-weight: var(--colony-fw-semibold) !important;
 }
 
-/* === Buttons === */
+/* =========================================================================
+   3. Login / user area
+   ========================================================================= */
 
-/* D-Link's "button_min" / "button_medium" classes (observed in DOM) */
-.button_min,
-.button_medium,
-.button {
-    background: var(--colony-parchment-hover) !important;
-    color: var(--colony-ink);
-    border: var(--colony-border-thin) solid var(--colony-ink-dim);
-    border-radius: var(--colony-radius-input);
-    font-family: var(--colony-font-body);
-    font-weight: var(--colony-fw-medium);
-    letter-spacing: var(--colony-tracking-wide);
-    text-transform: uppercase;
+.login_user {
+    color: var(--colony-ink-dim) !important;
+    font-size: var(--colony-fs-md) !important;
 }
 
-.button_min:hover,
-.button_medium:hover,
-.button:hover {
-    background: var(--colony-parchment-pressed) !important;
+.login_user a {
+    color: var(--colony-red) !important;
+    text-decoration: none;
 }
 
-.button_min:active,
-.button_medium:active {
-    background: var(--colony-red-soft) !important;
+.login_user a:hover {
+    text-decoration: underline;
+    color: var(--colony-ink) !important;
 }
 
-/* Primary action buttons (Next, Apply, Format, ...) */
-.button_min._text,         /* observed: Next/Format in wizard */
-.button.primary,
-.button_apply,
-#restart_button {
-    background: var(--colony-red) !important;
-    color: var(--colony-parchment);
-    border-color: var(--colony-ink);
+/* =========================================================================
+   4. Side status panel (.device_status, .volume_info, .percent_bg)
+   D-Link assumes dark gray panel; we have parchment now.
+   ========================================================================= */
+
+.device_status,
+.volume_info,
+.v_name,
+.size_info,
+.p_size,
+#title,
+#comment {
+    color: var(--colony-ink) !important;
 }
 
-.button_min._text:hover,
-.button.primary:hover,
-#restart_button:hover {
-    background: rgb(150, 45, 62) !important; /* slightly lighter red */
+.percent_bg {
+    background-color: var(--colony-parchment-pressed) !important;
+    border: 1px solid var(--colony-ink-very-dim) !important;
 }
 
-/* === Tables === */
+/* =========================================================================
+   5. Tables
+   ========================================================================= */
 
-table {
-    border-collapse: collapse;
-    background: var(--colony-parchment);
+.table1 th,
+.tr_title,
+.table_title_middle {
+    background-color: var(--colony-parchment-pressed) !important;
+    color: var(--colony-ink) !important;
+    font-weight: var(--colony-fw-semibold) !important;
+    letter-spacing: var(--colony-tracking-wide) !important;
+    text-transform: uppercase !important;
+    border-bottom: var(--colony-border-thin) solid var(--colony-red) !important;
 }
 
-table thead,
-.table_header,
-tr.header {
-    background: var(--colony-parchment-pressed);
-    color: var(--colony-ink);
-    font-weight: var(--colony-fw-semibold);
-    letter-spacing: var(--colony-tracking-wide);
-    text-transform: uppercase;
+.table1 td {
+    color: var(--colony-ink) !important;
+    border-bottom: var(--colony-border-thin) solid var(--colony-parchment-pressed) !important;
 }
 
-table tbody tr {
-    border-bottom: var(--colony-border-thin) solid var(--colony-parchment-pressed);
+.list_tr_even {
+    background-color: var(--colony-parchment) !important;
 }
 
-table tbody tr:hover {
-    background: var(--colony-parchment-hover);
+.list_tr_odd {
+    background-color: var(--colony-parchment-soft) !important;
 }
 
-/* === Form inputs === */
+/* Hover row */
+tr:hover td {
+    background-color: var(--colony-parchment-hover) !important;
+}
+
+/* =========================================================================
+   6. Form inputs
+   ========================================================================= */
 
 input[type="text"],
 input[type="password"],
 input[type="number"],
+input[type="email"],
 select,
 textarea {
     background: var(--colony-parchment) !important;
-    color: var(--colony-ink);
-    border: var(--colony-border-thin) solid var(--colony-ink-very-dim);
-    border-radius: var(--colony-radius-input);
-    font-family: var(--colony-font-mono);
-    padding: 4px 6px;
+    color: var(--colony-ink) !important;
+    border: var(--colony-border-thin) solid var(--colony-ink-very-dim) !important;
+    border-radius: var(--colony-radius-input) !important;
+    font-family: var(--colony-font-mono) !important;
+    padding: 3px 6px !important;
+    outline: none !important;
 }
 
 input[type="text"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus,
+input[type="email"]:focus,
 select:focus,
 textarea:focus {
-    outline: none;
-    border-color: var(--colony-red);
-    box-shadow: 0 0 0 2px var(--colony-red-very-soft);
+    border-color: var(--colony-red) !important;
+    box-shadow: 0 0 0 2px var(--colony-red-very-soft) !important;
 }
 
-/* === Wizard / modal dialogs === */
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--colony-red);
+}
 
-#formatdsk_Diag,             /* observed: RAID setup wizard */
-#shareDiag,
-.diag_container,
+/* =========================================================================
+   7. Wizard / dialog overlays
+   The .shareDiag uses pop_bg.png as bg (replaced via bind-mount).
+   We just fix text colors and add Colony embellishments.
+   ========================================================================= */
+
+.dialog_overlay,
 .shareDiag {
-    background: var(--colony-parchment) !important;
-    color: var(--colony-ink);
-    border: var(--colony-border-panel) solid var(--colony-red);
-    border-radius: var(--colony-radius-panel);
-    box-shadow: 0 10px 40px var(--colony-parchment-shadow),
-                0 0 0 9999px rgba(46, 26, 20, 0.4); /* dim background */
+    color: var(--colony-ink) !important;
 }
 
 .diag_title {
-    background: var(--colony-red);
-    color: var(--colony-parchment);
-    padding: 10px 14px;
-    letter-spacing: var(--colony-tracking-display);
-    text-transform: uppercase;
-    font-weight: var(--colony-fw-semibold);
+    background-color: var(--colony-red) !important;
+    color: var(--colony-parchment) !important;
+    padding: 8px 14px !important;
+    letter-spacing: var(--colony-tracking-display) !important;
+    text-transform: uppercase !important;
+    font-weight: var(--colony-fw-semibold) !important;
+    font-size: var(--colony-fs-md) !important;
     border-radius: var(--colony-radius-panel) var(--colony-radius-panel) 0 0;
 }
 
-/* === Status / notification overlay === */
-
-#alert_overlay {
-    background: var(--colony-parchment) !important;
-    border: var(--colony-border-panel) solid var(--colony-red);
-    color: var(--colony-ink);
+/* The overall popup outline */
+.shareDiag {
+    border: var(--colony-border-panel) solid var(--colony-red) !important;
+    border-radius: var(--colony-radius-panel) !important;
+    box-shadow: 0 12px 40px var(--colony-parchment-shadow) !important;
 }
 
-/* === Footer === */
+/* =========================================================================
+   8. Accordion (used in Disk Management etc.)
+   ========================================================================= */
 
-#footer,
-.footer {
+.accordion h3,
+.accordion_title {
+    background-color: var(--colony-parchment-hover) !important;
+    color: var(--colony-ink) !important;
+    border: var(--colony-border-thin) solid var(--colony-parchment-pressed) !important;
+    font-family: var(--colony-font-display) !important;
+    letter-spacing: var(--colony-tracking-wide) !important;
+}
+
+.accordion h3:hover {
+    background-color: var(--colony-parchment-pressed) !important;
+}
+
+.accordion h3.active {
+    background-color: var(--colony-red) !important;
+    color: var(--colony-parchment) !important;
+}
+
+/* =========================================================================
+   9. Apply buttons (small text-only variants)
+   ========================================================================= */
+
+.apply_button {
+    background-color: var(--colony-red) !important;
+    color: var(--colony-parchment) !important;
+    border: var(--colony-border-thin) solid var(--colony-ink) !important;
+    border-radius: var(--colony-radius-input) !important;
+    font-family: var(--colony-font-display) !important;
+    letter-spacing: var(--colony-tracking-wide) !important;
+    font-weight: var(--colony-fw-semibold) !important;
+    text-transform: uppercase !important;
+}
+
+.apply_button:hover {
+    background-color: rgb(150, 45, 62) !important;
+}
+
+.apply_off_button {
+    background-color: var(--colony-parchment-disabled) !important;
+    color: var(--colony-ink-very-dim) !important;
+    cursor: not-allowed;
+}
+
+/* =========================================================================
+   10. Help/refresh icons in top-right of management page
+   ========================================================================= */
+
+#help_icon,
+#refresh_status_icon {
+    color: var(--colony-red) !important;
+}
+
+#help_icon:hover,
+#refresh_status_icon:hover {
+    color: var(--colony-ink) !important;
+}
+
+/* =========================================================================
+   11. Status badges (enable/disable indicators)
+   ========================================================================= */
+
+.enable {
+    color: var(--colony-red) !important;
+    font-weight: var(--colony-fw-semibold);
+}
+
+.disable {
+    color: var(--colony-ink-very-dim) !important;
+}
+
+.share_error {
+    color: var(--colony-red) !important;
+    background: var(--colony-red-very-soft);
+    padding: 6px 10px;
+    border-radius: var(--colony-radius-input);
+    border-left: 3px solid var(--colony-red);
+}
+
+.share_ok {
+    color: rgb(60, 100, 50) !important;
+}
+
+/* =========================================================================
+   12. jQuery UI overrides (the .ui-state-* classes used by tabs/dialogs)
+   ========================================================================= */
+
+.ui-state-default,
+.ui-state-custom {
+    background: var(--colony-parchment-hover) !important;
+    color: var(--colony-ink) !important;
+    border-color: var(--colony-ink-very-dim) !important;
+}
+
+.ui-state-active,
+.ui-state-hover {
+    background: var(--colony-parchment-pressed) !important;
+    color: var(--colony-ink) !important;
+    border-color: var(--colony-red) !important;
+}
+
+.ui-widget-content {
+    background: var(--colony-parchment) !important;
+    color: var(--colony-ink) !important;
+}
+
+.ui-widget-header {
+    background: var(--colony-parchment-pressed) !important;
+    color: var(--colony-ink) !important;
+    border-color: var(--colony-red) !important;
+}
+
+/* =========================================================================
+   13. Scrollbars (where exposed via CSS - jScrollPane uses divs)
+   ========================================================================= */
+
+.jScrollPaneTrack,
+.osX .jScrollPaneTrack {
+    background-color: var(--colony-parchment-pressed) !important;
+}
+
+.jScrollPaneDrag,
+.osX .jScrollPaneDrag {
+    background-color: var(--colony-red-soft) !important;
+}
+
+/* Native overflow scrollbars (modern browsers) */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
     background: var(--colony-parchment-soft);
-    color: var(--colony-ink-very-dim);
-    border-top: var(--colony-border-thin) solid var(--colony-parchment-pressed);
-    font-size: var(--colony-fs-xs);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--colony-red-soft);
+    border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--colony-red);
+}
+
+/* =========================================================================
+   14. Links
+   ========================================================================= */
+
+a:link, a:visited {
+    color: var(--colony-red) !important;
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--colony-ink) !important;
+    text-decoration: underline;
+}
+
+a:active {
+    color: rgb(100, 25, 42) !important;
 }
