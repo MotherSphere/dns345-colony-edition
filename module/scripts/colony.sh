@@ -63,7 +63,44 @@ start() {
         fi
     done
 
-    log "=== colony.sh start done: $(wc -l < "$STATE_FILE") binds ==="
+    log "binds applied: $(wc -l < "$STATE_FILE")"
+
+    # --- gitweb persistence ---
+    # The D-Link firmware regenerates /etc/lighttpd/lighttpd.conf in tmpfs
+    # at every boot, so our gitweb additions disappear. Re-apply them by
+    # bind-mounting our extended config over the regenerated one, then
+    # restart lighttpd so it re-reads.
+    if [ -f "$COLONY_ROOT/lighttpd-colony.conf" ] && [ -f "$COLONY_ROOT/gitweb-colony.css" ]; then
+        log "applying gitweb persistence"
+
+        # Bind-mount our extended lighttpd.conf
+        if ! mount | grep -q " on /etc/lighttpd/lighttpd.conf "; then
+            if mount --bind "$COLONY_ROOT/lighttpd-colony.conf" /etc/lighttpd/lighttpd.conf 2>>"$LOG_FILE"; then
+                log "bound: lighttpd.conf -> Colony version"
+                echo "/etc/lighttpd/lighttpd.conf" >> "$STATE_FILE"
+            fi
+        fi
+
+        # Bind-mount Colony gitweb CSS
+        GW_CSS=/ffp/share/gitweb/static/gitweb.css
+        if [ -f "$GW_CSS" ] && ! mount | grep -q " on $GW_CSS "; then
+            if mount --bind "$COLONY_ROOT/gitweb-colony.css" "$GW_CSS" 2>>"$LOG_FILE"; then
+                log "bound: gitweb.css -> Colony version"
+                echo "$GW_CSS" >> "$STATE_FILE"
+            fi
+        fi
+
+        # Restart lighttpd-angel so the new config gets read.
+        # The angel script wraps lighttpd with -m /usr/lighty_lib for module paths.
+        if pgrep lighttpd >/dev/null 2>&1; then
+            killall lighttpd-angel lighttpd 2>/dev/null
+            sleep 1
+            /usr/sbin/lighttpd-angel -D -m /usr/lighty_lib -f /etc/lighttpd/lighttpd.conf &
+            log "lighttpd restarted"
+        fi
+    fi
+
+    log "=== colony.sh start done ==="
 }
 
 stop() {
