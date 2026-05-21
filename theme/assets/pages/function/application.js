@@ -699,13 +699,14 @@ function apkg_del(module_name)
     window.colony_show_git_panel = function(){
         var nas_host = window.location.hostname || 'dns345';
         var ssh_url  = 'ssh://' + nas_host + '/mnt/HD/HD_a2/git/&lt;repo&gt;.git';
-        var http_url = 'http://' + nas_host + '/git/gitweb.cgi';
+        var ui_url   = 'http://' + nas_host + '/colony-git/';
+        var legacy_url = 'http://' + nas_host + '/git/gitweb.cgi';
 
         var body =
             '<div style="font-family:JetBrainsMono,Consolas,monospace;font-size:13px;color:' + INK + ';">'
           + '  <p style="margin:0 0 14px 0;">'
           + '    Bare repos live in <code>/mnt/HD/HD_a2/git/</code> on the NAS.'
-          + '    Push / pull over SSH (root-key auth), browse over HTTP.'
+          + '    Push / pull over SSH (root-key auth), browse with Colony Git.'
           + '  </p>'
           + '  <div style="margin:0 0 6px 0;font-weight:bold;color:' + RED + ';">Clone a repo</div>'
           + '  <pre style="background:' + SOFT + ';border:1px solid ' + RED + ';'
@@ -718,10 +719,12 @@ function apkg_del(module_name)
                        + 'font-size:12px;white-space:pre-wrap;word-break:break-all;">'
                        + 'ssh ' + nas_host + ' "cd /mnt/HD/HD_a2/git &amp;&amp; '
                        + 'git init --bare &lt;repo&gt;.git"</pre>'
-          + '  <div style="margin:0 0 6px 0;font-weight:bold;color:' + RED + ';">Browse all repos</div>'
-          + '  <p style="margin:0;"><a href="' + http_url + '" target="_blank" '
-          + '   style="color:' + RED + ';text-decoration:underline;">'
-          + '    ' + http_url + '</a></p>'
+          + '  <div style="margin:0 0 6px 0;font-weight:bold;color:' + RED + ';">Browse repos</div>'
+          + '  <p style="margin:0 0 4px 0;"><a href="' + ui_url + '" '
+          + '   style="color:' + RED + ';text-decoration:underline;font-weight:bold;">'
+          + '    Colony Git</a> &mdash; the new UI</p>'
+          + '  <p style="margin:0;font-size:11px;color:#8c6b52;"><a href="' + legacy_url + '" target="_blank" '
+          + '   style="color:#8c6b52;text-decoration:underline;">gitweb (legacy)</a></p>'
           + '</div>';
 
         if ($('#colony_git_panel').length === 0) {
@@ -734,8 +737,8 @@ function apkg_del(module_name)
             width: 560,
             resizable: false,
             buttons: {
-                "Open gitweb": function(){
-                    window.open(http_url, '_blank');
+                "Open Colony Git": function(){
+                    window.location.href = ui_url;
                 },
                 "Close": function(){
                     $(this).dialog("close");

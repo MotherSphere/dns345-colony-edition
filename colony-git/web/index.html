@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colony Git</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="#/">
+            <svg class="brand-logo" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="6"  cy="5"  r="2.6" fill="currentColor"/>
+                <circle cx="6"  cy="12" r="2.6" fill="currentColor"/>
+                <circle cx="6"  cy="19" r="2.6" fill="currentColor"/>
+                <circle cx="18" cy="9"  r="2.6" fill="currentColor"/>
+                <line x1="6" y1="5"  x2="6"  y2="19" stroke="currentColor" stroke-width="1.6"/>
+                <line x1="6" y1="9"  x2="18" y2="9"  stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <span class="brand-name">COLONY GIT</span>
+        </a>
+        <nav class="crumbs" id="crumbs"></nav>
+        <div class="grow"></div>
+        <div class="searchbox">
+            <input id="search-input" type="search" placeholder="Search repos..." autocomplete="off">
+        </div>
+    </div>
+</header>
+
+<main id="app">
+    <div class="loading">Loading...</div>
+</main>
+
+<footer id="footer">
+    <span>Colony NAS - Git</span>
+    <span class="dot">&middot;</span>
+    <a href="/git/gitweb.cgi" target="_blank">gitweb (legacy)</a>
+    <span class="dot">&middot;</span>
+    <a href="https://github.com/MotherSphere/dns345-colony-edition" target="_blank">source</a>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
