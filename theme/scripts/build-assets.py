@@ -603,6 +603,70 @@ def gen_menu_icons():
 
 
 
+def _draw_icon_git(d, cx, cy, size, color):
+    """Git logo: three nodes joined by branches (main + two branched off).
+
+    Style matches the other vector menu icons (thick outlined strokes,
+    monochrome). Layout:
+        master line vertical with 3 nodes; one branch line off the middle
+        node to a 4th node on the right (canonical "git branch" silhouette).
+    """
+    r = max(5, size // 11)  # node radius
+    stroke = 3
+
+    # Master vertical line
+    top    = (cx - size // 6, cy - size // 3)
+    middle = (cx - size // 6, cy)
+    bottom = (cx - size // 6, cy + size // 3)
+    # Branch node off to the right
+    branch = (cx + size // 3, cy - size // 8)
+
+    # Trunk line
+    d.line([top, bottom], fill=color, width=stroke)
+    # Branch curve (two-segment): up-right then to branch node
+    elbow = (cx - size // 6, cy - size // 8)
+    d.line([elbow, branch], fill=color, width=stroke)
+
+    # Nodes
+    for (nx, ny) in (top, middle, bottom, branch):
+        d.ellipse((nx - r, ny - r, nx + r, ny + r), fill=color)
+
+
+def gen_app_tile_icons():
+    """Application-page tile icons 140x156, on/off.
+
+    Mirrors gen_menu_icons() format - same dimensions, same border/bg recipe -
+    but renders into pages/images/management/<id>_{on,off}.png for entries
+    that get pushed into APP_INFO with module_type=1 (Build-in).
+    """
+    drawers = {
+        "git": _draw_icon_git,
+    }
+    labels = {
+        "git": "Git",
+    }
+    for kind, drawer in drawers.items():
+        for on in (True, False):
+            state = "on" if on else "off"
+            rel = f"pages/images/management/{kind}_{state}.png"
+            w, h = 140, 156
+            img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            d = ImageDraw.Draw(img)
+            bg = PARCHMENT_PRESSED if on else PARCHMENT_HOVER
+            border = RED if on else INK_VERY_DIM
+            d.rounded_rectangle((2, 2, w - 3, h - 3), radius=6, fill=bg,
+                                outline=border, width=2 if on else 1)
+            drawer(d, w // 2, 60, 64, RED if on else INK_DIM)
+            label_font = ImageFont.truetype(str(FONT_MEDIUM), 13)
+            bbox = d.textbbox((0, 0), labels[kind], font=label_font)
+            lw = bbox[2] - bbox[0]; lh = bbox[3] - bbox[1]
+            lx = (w - lw) // 2 - bbox[0]
+            ly = h - lh - 14
+            d.text((lx, ly), labels[kind], font=label_font, fill=INK if on else INK_DIM)
+            img.save(out(rel), "PNG", optimize=True)
+            print(f"  app-tile 140x156  {rel}  on={on}")
+
+
 def gen_logout_icon():
     rel = "pages/images/management/logout.png"
     w, h = 87, 46
@@ -637,6 +701,7 @@ def main():
     gen_logos()
     gen_banner_pieces()
     gen_menu_icons()
+    gen_app_tile_icons()
     gen_logout_icon()
     gen_panel_backgrounds()
     gen_alert_panels()
