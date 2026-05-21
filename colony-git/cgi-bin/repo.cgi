@@ -91,11 +91,31 @@ if [ -n "$readme_path" ]; then
     readme_content=$(git_in "$repo_dir" show "HEAD:$readme_path" 2>/dev/null | /ffp/bin/head -c 262144)
 fi
 
+# --- LICENSE detection: same case-insensitive scan over root tree ---
+license_path=""
+for candidate in LICENSE LICENSE.md LICENSE.txt LICENCE LICENCE.md COPYING COPYING.md license license.md; do
+    saved_ifs=$IFS
+    IFS=$'\n'
+    for entry in $tree_entries; do
+        if [ "$entry" = "$candidate" ]; then
+            license_path=$candidate
+            break 2
+        fi
+    done
+    IFS=$saved_ifs
+done
+IFS=$saved_ifs
+
+# --- total commit count (HEAD) ---
+total_commits=$(git_in "$repo_dir" rev-list --count HEAD 2>/dev/null) || total_commits=0
+
 # --- emit JSON ---
 printf '{'
 printf '"name":"%s",'           "$(json_escape_value "$name")"
 printf '"description":"%s",'    "$(json_escape_value "$desc")"
 printf '"default_branch":"%s",' "$(json_escape_value "$default_branch")"
+printf '"total_commits":%d,'    "${total_commits:-0}"
+printf '"license_path":%s,'     "$([ -n "$license_path" ] && printf '"%s"' "$(json_escape_value "$license_path")" || printf 'null')"
 printf '"head":{'
 printf '"hash":"%s",'    "$(json_escape_value "$head_hash")"
 printf '"date":"%s",'    "$(json_escape_value "$head_date")"
