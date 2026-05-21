@@ -33,6 +33,12 @@ emit_error() {
 # Handles backslash, double-quote, newline, CR, tab. Other control chars
 # are stripped (git output rarely contains them; safest to drop than to
 # emit invalid JSON).
+#
+# WARNING: bash's ${s//pattern/replacement} is O(n^2) on bash 4.1.x (which
+# ships with this NAS). Fine for short strings (filenames, short subjects,
+# dates), DON'T pipe a multi-KB payload through this. For big blobs (READMEs,
+# diffs, stat output) escape via streaming awk - see repo.cgi / commit.cgi
+# for the pattern.
 json_escape_value() {
     local s=$1
     s=${s//\\/\\\\}

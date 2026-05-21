@@ -1,0 +1,33 @@
+#!/ffp/bin/bash
+# Colony Git post-receive hook
+#
+# Pre-warm the per-repo caches so the next browse hits them.
+# Detached and silent: a push must never feel slower because of this.
+#
+# Installed into every bare repo's hooks/ dir via
+# colony-git/scripts/install-hooks.sh.
+
+set +u  # be lenient: hooks are run by `git push` and we don't want a stray
+        # unset variable to break a perfectly good push.
+
+# Resolve our own .git directory (we live in <repo>.git/hooks/post-receive).
+REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
+REPO_NAME=$(basename "$REPO_DIR")
+
+# Where the colony-git CGI scripts live (could be overridden by an env var).
+CGI_DIR=${COLONY_GIT_CGI_DIR:-/ffp/colony/colony-git/cgi-bin}
+
+if [ ! -d "$CGI_DIR" ]; then
+    exit 0  # colony-git not deployed - silently skip
+fi
+
+# Detach completely from the push session so the SSH client doesn't wait
+# on us. nohup keeps us running if the parent shell exits; the subshell
+# redirects all I/O so git's receive-pack doesn't block on our pipes.
+(
+    cd /
+    exec >/dev/null 2>&1 </dev/null
+    QUERY_STRING="name=$REPO_NAME" "$CGI_DIR/languages.cgi"
+) &
+
+exit 0

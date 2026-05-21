@@ -105,11 +105,12 @@ git_in "$repo_dir" ls-tree -r -l "$ref" 2>/dev/null \
 
         bytes[ext] += size + 0;
         total += size + 0;
+        file_count += 1;
     }
     END {
         gsub(/\\/, "\\\\", ref);
         gsub(/"/,  "\\\"", ref);
-        printf("{\"ref\":\"%s\",\"total\":%d,\"extensions\":{", ref, total);
+        printf("{\"ref\":\"%s\",\"total\":%d,\"file_count\":%d,\"extensions\":{", ref, total, file_count);
         first = 1;
         for (k in bytes) {
             if (!first) printf(",");

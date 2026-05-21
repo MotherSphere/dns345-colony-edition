@@ -92,11 +92,19 @@ start() {
 
         # Restart lighttpd-angel so the new config gets read.
         # The angel script wraps lighttpd with -m /usr/lighty_lib for module paths.
+        # Poll until the old processes fully exit (up to 10s) rather than
+        # sleeping a hopeful 1s - a slow ARMv5 box under I/O load can take a
+        # surprising amount of time to release :80, and restarting too soon
+        # leaves the new lighttpd in EADDRINUSE.
         if pgrep lighttpd >/dev/null 2>&1; then
             killall lighttpd-angel lighttpd 2>/dev/null
-            sleep 1
+            t=0
+            while [ $t -lt 10 ] && pgrep lighttpd >/dev/null 2>&1; do
+                sleep 1
+                t=$((t + 1))
+            done
             /usr/sbin/lighttpd-angel -D -m /usr/lighty_lib -f /etc/lighttpd/lighttpd.conf &
-            log "lighttpd restarted"
+            log "lighttpd restarted (waited ${t}s for old procs to exit)"
         fi
     fi
 

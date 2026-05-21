@@ -59,6 +59,49 @@ for repo_dir in "$REPOS_ROOT"/*.git; do
     size_kb=$(du -sk "$repo_dir" 2>/dev/null | awk '{print $1}')
     size_bytes=$((${size_kb:-0} * 1024))
 
+    # File count + dominant extension: read from languages-<HEAD>.json cache
+    # if available (written by languages.cgi on first browse or by the
+    # post-receive hook). Avoids a fresh ls-tree -r per repo per home view.
+    file_count=0
+    dominant_ext=""
+    head_full=$(git_in "$repo_dir" rev-parse HEAD 2>/dev/null)
+    cache_json="$repo_dir/colony-cache/languages-$head_full.json"
+    if [ -n "$head_full" ] && [ -f "$cache_json" ]; then
+        # Pull file_count + dominant ext via gawk: the dominant ext is the
+        # key with the biggest byte count in the "extensions" object. We
+        # only emit the extension string (with the leading dot), the SPA
+        # turns that into a colored badge.
+        ext_line=$(/ffp/bin/awk '
+            BEGIN { fc = 0; total = 0; best_k = ""; best_v = 0 }
+            {
+                # Match "file_count":NUMBER
+                if (match($0, /"file_count":[0-9]+/)) {
+                    s = substr($0, RSTART + 13, RLENGTH - 13);
+                    fc = s + 0;
+                }
+                # Extract extensions object body
+                if (match($0, /"extensions":\{[^}]*\}/)) {
+                    body = substr($0, RSTART + 14, RLENGTH - 15);
+                    n = split(body, parts, ",");
+                    for (i = 1; i <= n; i++) {
+                        p = parts[i];
+                        # Each part: "key":value
+                        c = index(p, ":");
+                        if (c == 0) continue;
+                        k = substr(p, 1, c - 1);
+                        v = substr(p, c + 1) + 0;
+                        # Strip surrounding quotes from key
+                        gsub(/^"|"$/, "", k);
+                        if (v > best_v) { best_v = v; best_k = k; }
+                    }
+                }
+            }
+            END { print fc "\t" best_k }
+        ' "$cache_json")
+        file_count=${ext_line%%$'\t'*}
+        dominant_ext=${ext_line#*$'\t'}
+    fi
+
     [ $first -eq 0 ] && printf ','
     first=0
 
@@ -72,7 +115,9 @@ for repo_dir in "$REPOS_ROOT"/*.git; do
     printf '"last_commit_author":"%s",' "$(json_escape_value "${last_author:-}")"
     printf '"last_commit_subject":"%s",' "$(json_escape_value "${last_subject:-}")"
     printf '"commit_count":%d,'       "${commit_count:-0}"
-    printf '"size_bytes":%d'          "${size_bytes:-0}"
+    printf '"size_bytes":%d,'         "${size_bytes:-0}"
+    printf '"file_count":%d,'         "${file_count:-0}"
+    printf '"dominant_ext":"%s"'      "$(json_escape_value "$dominant_ext")"
     printf '}'
 done
 

@@ -251,6 +251,42 @@
         return { name: ext ? ext.replace(/^\./, '') : 'Other', color: '#8c6b52' };
     }
 
+    // Map file extension to a hljs language id when the auto-detection would
+    // otherwise pick something wrong. Best-effort; missing extensions fall
+    // back to hljs.highlightAuto().
+    var HLJS_EXT_MAP = {
+        '.rs': 'rust', '.ts': 'typescript', '.tsx': 'typescript',
+        '.js': 'javascript', '.jsx': 'javascript', '.mjs': 'javascript',
+        '.py': 'python', '.go': 'go', '.c': 'c', '.cpp': 'cpp', '.cc': 'cpp',
+        '.cxx': 'cpp', '.h': 'c', '.hpp': 'cpp',
+        '.java': 'java', '.kt': 'kotlin', '.rb': 'ruby', '.php': 'php',
+        '.sh': 'bash', '.bash': 'bash', '.cgi': 'bash',
+        '.html': 'html', '.htm': 'html', '.css': 'css', '.scss': 'scss', '.sass': 'scss',
+        '.md': 'markdown', '.markdown': 'markdown',
+        '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml', '.toml': 'ini',
+        '.xml': 'xml', '.svg': 'xml', '.sql': 'sql',
+        '.swift': 'swift', '.lua': 'lua', '.dart': 'dart',
+        '.gd': 'gdscript', '.cs': 'csharp', '.vue': 'xml', '.svelte': 'xml',
+        '.scala': 'scala', '.r': 'r', '.cfg': 'ini', '.conf': 'ini', '.ini': 'ini',
+        '.dockerfile': 'dockerfile'
+    };
+    function applySyntaxHighlight(codeEl, path) {
+        try {
+            var slash = path.lastIndexOf('/');
+            var basename = slash >= 0 ? path.slice(slash + 1) : path;
+            var ext = '';
+            var dot = basename.lastIndexOf('.');
+            if (dot > 0) ext = basename.slice(dot).toLowerCase();
+            var lang = HLJS_EXT_MAP[ext];
+            if (lang && hljs.getLanguage && hljs.getLanguage(lang)) {
+                codeEl.className = 'hljs language-' + lang;
+                hljs.highlightElement(codeEl);
+            } else {
+                hljs.highlightElement(codeEl);
+            }
+        } catch (e) { /* highlight failures are non-fatal */ }
+    }
+
     // -----------------------------------------------------------------
     // Popover (floating dropdown) primitives
     // -----------------------------------------------------------------
@@ -413,9 +449,11 @@
             var item = el('div', { class: 'item' + (isActive ? ' active' : ''), text: refName });
             item.addEventListener('click', function () {
                 closePopover();
-                location.hash = '#/' + encodeURIComponent(repo);
-                // We always navigate to root tree; the SPA reads default_branch
-                // (full ref switching across views is a v3 feature).
+                // Switch to root tree at the chosen ref. The default branch
+                // gets a bare URL (#/<repo>); others embed @ref so reloads
+                // and bookmarks keep the user on the same branch.
+                var isDefault = refName === info.default_branch;
+                location.hash = '#/' + repoHash(repo, isDefault ? '' : refName);
             });
             return item;
         }
@@ -500,7 +538,7 @@
                     item.addEventListener('click', function () {
                         $('#overlay').classList.add('hidden');
                         $('#overlay').innerHTML = '';
-                        location.hash = '#/' + encodeURIComponent(repo) + '/blob/' + encodeURI(p);
+                        location.hash = '#/' + repoHash(repo, ref) + '/blob/' + encodeURI(p);
                     });
                     list.appendChild(item);
                 });
@@ -542,7 +580,7 @@
                     if (filtered[activeIdx]) {
                         $('#overlay').classList.add('hidden');
                         $('#overlay').innerHTML = '';
-                        location.hash = '#/' + encodeURIComponent(repo) + '/blob/' + encodeURI(filtered[activeIdx]);
+                        location.hash = '#/' + repoHash(repo, ref) + '/blob/' + encodeURI(filtered[activeIdx]);
                     }
                     e.preventDefault();
                 }
@@ -566,6 +604,9 @@
             el('span', { class: 'time', text: relTime(head.date) }),
             el('a', {
                 class: 'commits-link',
+                // The commits view runs against whatever ref the caller chose
+                // for this strip; we pass it through latestCommitStrip's repo arg
+                // pair (the strip is only rendered at the tree root anyway).
                 href: '#/' + encodeURIComponent(repo) + '/commits',
                 text: (totalCommits || 0) + ' Commits'
             })
@@ -577,9 +618,10 @@
         opts = opts || {};
         var wrap = el('div');
 
-        // path crumbs
+        // path crumbs - all tree links carry the current ref so navigation
+        // doesn't silently snap back to the default branch.
         var crumbs = el('div', { class: 'path-crumbs' });
-        crumbs.appendChild(el('a', { href: '#/' + encodeURIComponent(repo) }, repo.replace(/\.git$/, '')));
+        crumbs.appendChild(el('a', { href: '#/' + repoHash(repo, ref) }, repo.replace(/\.git$/, '')));
         if (path) {
             var so_far = '';
             path.split('/').forEach(function (seg) {
@@ -587,7 +629,7 @@
                 so_far = so_far ? so_far + '/' + seg : seg;
                 crumbs.appendChild(el('span', { class: 'sep', text: '/' }));
                 crumbs.appendChild(el('a', {
-                    href: '#/' + encodeURIComponent(repo) + '/tree/' + encodeURI(so_far)
+                    href: '#/' + repoHash(repo, ref) + '/tree/' + encodeURI(so_far)
                 }, seg));
             });
         }
@@ -606,7 +648,7 @@
 
         if (path) {
             var parent = path.split('/').slice(0, -1).join('/');
-            var parentHref = '#/' + encodeURIComponent(repo)
+            var parentHref = '#/' + repoHash(repo, ref)
                 + (parent ? '/tree/' + encodeURI(parent) : '');
             tree.appendChild(renderTreeRow({
                 name: '..', type: 'tree', size: null, last_commit: null,
@@ -616,7 +658,7 @@
         entries.forEach(function (e) {
             var entryPath = path ? path + '/' + e.name : e.name;
             var action = e.type === 'tree' ? 'tree' : 'blob';
-            var href = '#/' + encodeURIComponent(repo) + '/' + action + '/' + encodeURI(entryPath);
+            var href = '#/' + repoHash(repo, ref) + '/' + action + '/' + encodeURI(entryPath);
             e.href = href;
             tree.appendChild(renderTreeRow(e));
         });
@@ -635,22 +677,29 @@
 
         var lastMsg;
         if (entry.last_commit && entry.last_commit.subject) {
-            lastMsg = el('div', { class: 'last-msg' }, [
+            // Full subject in tooltip so truncated lines stay readable.
+            lastMsg = el('div', { class: 'last-msg', title: entry.last_commit.subject }, [
                 el('span', { text: entry.last_commit.subject })
             ]);
         } else {
             lastMsg = el('div', { class: 'last-msg', text: entry.size != null ? fmtBytes(entry.size) : '' });
         }
 
-        var timeText = entry.last_commit && entry.last_commit.ts
-            ? relTime(entry.last_commit.ts)
-            : '';
-        var time = el('div', { class: 'time', text: timeText });
+        var timeText = '';
+        var timeTitle = '';
+        if (entry.last_commit && entry.last_commit.ts) {
+            timeText = relTime(entry.last_commit.ts);
+            // Absolute timestamp in tooltip.
+            var d = new Date(entry.last_commit.ts * 1000);
+            timeTitle = d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+        }
+        var time = el('div', { class: 'time', title: timeTitle, text: timeText });
 
         return el('div', { class: 'row' }, [icon, name, lastMsg, time]);
     }
 
-    function renderAboutSidebar(repo, info, langs) {
+    function renderAboutSidebar(repo, info, langs, ref) {
+        ref = ref || '';
         var aside = el('aside', { class: 'repo-sidebar' });
 
         // About section
@@ -663,26 +712,26 @@
         }
         if (info.readme) {
             about.appendChild(el('div', { class: 'about-badge' }, [
-                el('span', { class: 'glyph', text: '§' }),  // §
+                el('span', { class: 'glyph', text: '§' }),
                 el('a', {
-                    href: '#/' + encodeURIComponent(repo) + '/blob/' + encodeURI(info.readme.path),
+                    href: '#/' + repoHash(repo, ref) + '/blob/' + encodeURI(info.readme.path),
                     text: info.readme.path
                 })
             ]));
         }
         if (info.license_path) {
             about.appendChild(el('div', { class: 'about-badge' }, [
-                el('span', { class: 'glyph', text: '©' }),  // ©
+                el('span', { class: 'glyph', text: '©' }),
                 el('a', {
-                    href: '#/' + encodeURIComponent(repo) + '/blob/' + encodeURI(info.license_path),
+                    href: '#/' + repoHash(repo, ref) + '/blob/' + encodeURI(info.license_path),
                     text: info.license_path
                 })
             ]));
         }
         about.appendChild(el('div', { class: 'about-badge' }, [
-            el('span', { class: 'glyph', text: '⧖' }),  // hourglass-ish
+            el('span', { class: 'glyph', text: '⧖' }),
             el('a', {
-                href: '#/' + encodeURIComponent(repo) + '/commits',
+                href: '#/' + repoHash(repo, ref) + '/commits',
                 text: (info.total_commits || 0) + ' commits'
             })
         ]));
@@ -761,10 +810,21 @@
         if (path.charAt(0) !== '/') path = '/' + path;
         var parts = path.slice(1).split('/').map(decodeURIComponent);
         if (parts.length === 0 || parts[0] === '') return { view: 'home' };
-        var repo = parts[0];
+
+        // The repo segment may carry a ref via @ref suffix: foo.git@feature-x
+        var repoSeg = parts[0];
+        var atIdx = repoSeg.indexOf('@');
+        var repo = atIdx >= 0 ? repoSeg.slice(0, atIdx) : repoSeg;
+        var ref  = atIdx >= 0 ? repoSeg.slice(atIdx + 1) : '';
+
         var action = parts[1] || 'home';
         var rest = parts.slice(2).join('/');
-        return { view: action, repo: repo, path: rest };
+        return { view: action, repo: repo, ref: ref, path: rest };
+    }
+
+    // Build the repo segment of a URL, embedding ref via @ when non-empty.
+    function repoHash(repo, ref) {
+        return encodeURIComponent(repo) + (ref ? '@' + encodeURI(ref) : '');
     }
 
     function renderCrumbs(route) {
@@ -807,6 +867,22 @@
                     r.last_commit_subject
                         ? r.last_commit_author + ' - ' + relTime(r.last_commit_at)
                         : 'no commits' }));
+                // Language badge (uses cache when present; absent for cold repos until first browse / post-receive)
+                if (r.dominant_ext) {
+                    var lang = langInfo(r.dominant_ext);
+                    var langBadge = el('span', { class: 'badge lang-badge', title: 'Dominant language' }, [
+                        (function () {
+                            var d = el('span', { class: 'lang-dot' });
+                            d.style.background = lang.color;
+                            return d;
+                        })(),
+                        lang.name
+                    ]);
+                    meta.appendChild(langBadge);
+                }
+                if (r.file_count) {
+                    meta.appendChild(el('span', { class: 'badge', text: r.file_count + ' files' }));
+                }
                 meta.appendChild(el('span', { class: 'badge', text: r.commit_count + ' commits' }));
                 meta.appendChild(el('span', { class: 'badge', text: fmtBytes(r.size_bytes) }));
                 card.appendChild(meta);
@@ -826,7 +902,8 @@
         });
     }
 
-    function renderRepoHeader(repo, info, activeTab) {
+    function renderRepoHeader(repo, info, activeTab, ref) {
+        ref = ref || '';
         $('#app').innerHTML = '';
 
         var header = el('div', { class: 'repo-header' });
@@ -839,7 +916,7 @@
         var nB = (info.branches || []).length, nT = (info.tags || []).length;
         function tab(name, label, count) {
             var a = el('a', {
-                href: '#/' + encodeURIComponent(repo) + (name === 'code' ? '' : '/' + name),
+                href: '#/' + repoHash(repo, ref) + (name === 'code' ? '' : '/' + name),
                 class: name === activeTab ? 'active' : ''
             }, [label]);
             if (count != null) a.appendChild(el('span', { class: 'count', text: '(' + count + ')' }));
@@ -857,30 +934,31 @@
     function viewCode(route, isRoot) {
         showLoading();
         var path = route.path || '';
+        // route.ref is empty when the URL has no @ref suffix, signalling
+        // "use the default branch". Backend CGIs default to HEAD on empty.
+        var ref = route.ref || '';
 
-        // Single fast fetch first: repo metadata + (optionally) README content.
-        // Tree-with-last-commits and languages are slow on ARMv5 — defer them
-        // and overlay incrementally so the header/toolbar/README appear immediately.
         api('repo', { name: route.repo, include_readme: isRoot ? 1 : '' })
         .then(function (info) {
-            renderRepoHeader(route.repo, info, 'code');
+            // Resolve the effective ref for the toolbar's branch pill: the
+            // URL ref wins, otherwise we fall back to the repo's default.
+            var effectiveRef = ref || info.default_branch;
+            renderRepoHeader(route.repo, info, 'code', ref);
 
             var layout = el('div', { class: 'repo-layout' });
             var main   = el('div', { class: 'repo-main' });
-            var aside  = renderAboutSidebar(route.repo, info, null);  // langs added later
+            var aside  = renderAboutSidebar(route.repo, info, null, ref);
 
-            main.appendChild(renderCodeToolbar(route.repo, info, info.default_branch));
+            main.appendChild(renderCodeToolbar(route.repo, info, effectiveRef));
 
             if (!path && info.head) {
                 var strip = renderLatestCommitStrip(route.repo, info.head, info.total_commits);
                 if (strip) main.appendChild(strip);
             }
 
-            // Tree placeholder - swapped in once treelog.cgi returns.
             var treeSlot = el('div', { class: 'loading', text: 'Loading files...' });
             main.appendChild(treeSlot);
 
-            // README only rendered when content was included (= isRoot path).
             if (!path && info.readme && info.readme.content) {
                 main.appendChild(renderReadme(info.readme));
             }
@@ -889,10 +967,9 @@
             layout.appendChild(aside);
             $('#app').appendChild(layout);
 
-            // Tree + per-file last commit (heaviest of the two slow fetches).
-            api('treelog', { name: route.repo, ref: '', path: path })
+            api('treelog', { name: route.repo, ref: ref, path: path })
                 .then(function (tree) {
-                    var treeEl = renderTreeV2(route.repo, info.default_branch, path, tree.entries);
+                    var treeEl = renderTreeV2(route.repo, effectiveRef, path, tree.entries);
                     treeSlot.replaceWith(treeEl);
                 })
                 .catch(function (err) {
@@ -900,15 +977,14 @@
                         text: 'Failed to load files: ' + (err.message || err) }));
                 });
 
-            // Languages chart (cached server-side keyed on HEAD - hits are fast).
             if (isRoot) {
-                api('languages', { name: route.repo })
+                api('languages', { name: route.repo, ref: ref })
                     .then(function (langs) {
-                        var newAside = renderAboutSidebar(route.repo, info, langs);
+                        var newAside = renderAboutSidebar(route.repo, info, langs, ref);
                         aside.replaceWith(newAside);
-                        aside = newAside;  // keep handle in case we re-replace
+                        aside = newAside;
                     })
-                    .catch(function () { /* ignore: sidebar still works without langs */ });
+                    .catch(function () { /* sidebar still works without langs */ });
             }
         })
         .catch(showError);
@@ -927,16 +1003,18 @@
     function viewBlob(route) {
         showLoading();
         var path = route.path || '';
+        var ref = route.ref || '';
         api('repo', { name: route.repo }).then(function (info) {
-            renderRepoHeader(route.repo, info, 'code');
+            var effectiveRef = ref || info.default_branch;
+            renderRepoHeader(route.repo, info, 'code', ref);
 
             var layout = el('div', { class: 'repo-layout' });
             var main = el('div', { class: 'repo-main' });
-            var aside = renderAboutSidebar(route.repo, info, null);
-            main.appendChild(renderCodeToolbar(route.repo, info, info.default_branch));
+            var aside = renderAboutSidebar(route.repo, info, null, ref);
+            main.appendChild(renderCodeToolbar(route.repo, info, effectiveRef));
 
             var qs = '?name=' + encodeURIComponent(route.repo)
-                   + '&ref=' + encodeURIComponent(info.default_branch)
+                   + '&ref=' + encodeURIComponent(effectiveRef)
                    + '&path=' + encodeURIComponent(path);
             fetch(API + 'blob.cgi' + qs, { cache: 'no-store' }).then(function (r) {
                 var ct = r.headers.get('Content-Type') || '';
@@ -950,7 +1028,7 @@
                 }
                 return r.text().then(function (text) {
                     var pathCrumbs = el('div', { class: 'path-crumbs' });
-                    pathCrumbs.appendChild(el('a', { href: '#/' + encodeURIComponent(route.repo), text: route.repo.replace(/\.git$/, '') }));
+                    pathCrumbs.appendChild(el('a', { href: '#/' + repoHash(route.repo, ref), text: route.repo.replace(/\.git$/, '') }));
                     var sofar = '';
                     var segs = path.split('/');
                     segs.forEach(function (seg, i) {
@@ -960,16 +1038,29 @@
                             pathCrumbs.appendChild(el('span', { text: seg }));
                         } else {
                             pathCrumbs.appendChild(el('a', {
-                                href: '#/' + encodeURIComponent(route.repo) + '/tree/' + encodeURI(sofar),
+                                href: '#/' + repoHash(route.repo, ref) + '/tree/' + encodeURI(sofar),
                                 text: seg
                             }));
                         }
                     });
+                    var rawUrl = API + 'blob.cgi?' + qs.slice(1);
                     main.appendChild(el('div', { class: 'blob-toolbar' }, [
                         pathCrumbs,
-                        el('span', { class: 'blob-meta', text: fmtBytes(text.length) + ' - ' + text.split('\n').length + ' lines' })
+                        el('div', { class: 'blob-actions' }, [
+                            el('span', { class: 'blob-meta',
+                                text: fmtBytes(text.length) + ' - ' + text.split('\n').length + ' lines' }),
+                            el('a', { class: 'blob-raw-btn', href: rawUrl, target: '_blank',
+                                      title: 'Open raw file in a new tab' }, 'Raw')
+                        ])
                     ]));
-                    main.appendChild(el('pre', { class: 'blob-content', text: text }));
+                    // Highlight by file extension when hljs has a matching language.
+                    // Bail out on very large files to keep the page responsive.
+                    var code = el('code', { class: 'hljs', text: text });
+                    var pre = el('pre', { class: 'blob-content' }, code);
+                    main.appendChild(pre);
+                    if (window.hljs && text.length < 512 * 1024) {
+                        applySyntaxHighlight(code, path);
+                    }
                 });
             }).then(function () {
                 layout.appendChild(main);
@@ -981,16 +1072,23 @@
 
     function viewCommits(route) {
         showLoading();
+        var ref = route.ref || '';
+        // Parse ?skip=N from the path tail (set by pagination buttons).
+        var skipMatch = (route.path || '').match(/(?:^|\/)skip-(\d+)$/);
+        var skip = skipMatch ? parseInt(skipMatch[1], 10) : 0;
+        var pageSize = 50;
+
         Promise.all([
             api('repo',    { name: route.repo }),
-            api('commits', { name: route.repo, ref: '', limit: 100 })
+            api('commits', { name: route.repo, ref: ref, limit: pageSize, skip: skip })
         ]).then(function (results) {
             var info = results[0], res = results[1];
-            renderRepoHeader(route.repo, info, 'commits');
+            var effectiveRef = ref || info.default_branch;
+            renderRepoHeader(route.repo, info, 'commits', ref);
 
             var layout = el('div', { class: 'repo-layout' });
             var main = el('div', { class: 'repo-main' });
-            main.appendChild(renderCodeToolbar(route.repo, info, info.default_branch));
+            main.appendChild(renderCodeToolbar(route.repo, info, effectiveRef));
 
             var list = el('div', { class: 'commit-list' });
             if (!res.commits.length) {
@@ -998,31 +1096,182 @@
             } else {
                 res.commits.forEach(function (c) {
                     var subj = el('div', { class: 'subject' });
-                    subj.appendChild(el('div', { class: 'line1', text: c.subject }));
+                    var subjectLink = el('a', {
+                        class: 'commit-subject-link',
+                        href: '#/' + repoHash(route.repo, ref) + '/commit/' + c.hash
+                    }, c.subject);
+                    subj.appendChild(el('div', { class: 'line1' }, subjectLink));
                     subj.appendChild(el('div', { class: 'line2',
                         text: c.author + ' - ' + relTime(c.date) + ' (' + (c.date || '?') + ')' }));
                     list.appendChild(el('div', { class: 'commit' }, [
                         subj,
-                        el('span', { class: 'hash-pill', text: c.short })
+                        el('a', {
+                            class: 'hash-pill',
+                            href: '#/' + repoHash(route.repo, ref) + '/commit/' + c.hash,
+                            title: 'View diff'
+                        }, c.short)
                     ]));
                 });
             }
             main.appendChild(list);
 
+            // Pagination: Older / Newer. The current page is encoded as a
+            // /skip-N suffix on the commits path so reloads/bookmarks land
+            // exactly where the user was browsing.
+            var pager = el('div', { class: 'pager' });
+            var commitsBase = '#/' + repoHash(route.repo, ref) + '/commits';
+            if (skip > 0) {
+                var newerSkip = Math.max(0, skip - pageSize);
+                pager.appendChild(el('a', {
+                    class: 'tb-btn',
+                    href: commitsBase + (newerSkip > 0 ? '/skip-' + newerSkip : ''),
+                    text: 'Newer'
+                }));
+            } else {
+                pager.appendChild(el('span', { class: 'tb-btn disabled', text: 'Newer' }));
+            }
+            pager.appendChild(el('span', { class: 'pager-info',
+                text: 'commits ' + (skip + 1) + '-' + (skip + res.commits.length) }));
+            // We don't know the total without an extra count, so we expose
+            // "Older" whenever the current page is full.
+            if (res.commits.length >= pageSize) {
+                pager.appendChild(el('a', {
+                    class: 'tb-btn',
+                    href: commitsBase + '/skip-' + (skip + pageSize),
+                    text: 'Older'
+                }));
+            } else {
+                pager.appendChild(el('span', { class: 'tb-btn disabled', text: 'Older' }));
+            }
+            main.appendChild(pager);
+
             layout.appendChild(main);
-            layout.appendChild(renderAboutSidebar(route.repo, info, null));
+            layout.appendChild(renderAboutSidebar(route.repo, info, null, ref));
             $('#app').appendChild(layout);
         }).catch(showError);
     }
 
-    function viewRefs(route) {
+    function viewCommit(route) {
         showLoading();
-        api('repo', { name: route.repo }).then(function (info) {
-            renderRepoHeader(route.repo, info, 'refs');
+        var hash = (route.path || '').split('/')[0];
+        if (!hash) { showError(new Error('missing commit hash')); return; }
+        var ref = route.ref || '';
+
+        Promise.all([
+            api('repo',   { name: route.repo }),
+            api('commit', { name: route.repo, hash: hash })
+        ]).then(function (results) {
+            var info = results[0], commit = results[1];
+            var effectiveRef = ref || info.default_branch;
+            renderRepoHeader(route.repo, info, 'commits', ref);
 
             var layout = el('div', { class: 'repo-layout' });
             var main = el('div', { class: 'repo-main' });
-            main.appendChild(renderCodeToolbar(route.repo, info, info.default_branch));
+            main.appendChild(renderCodeToolbar(route.repo, info, effectiveRef));
+
+            // Commit header card
+            var header = el('div', { class: 'commit-detail-header' });
+            header.appendChild(el('div', { class: 'commit-detail-subject', text: commit.subject }));
+            if (commit.body) {
+                header.appendChild(el('pre', { class: 'commit-detail-body', text: commit.body }));
+            }
+            var metaLine = el('div', { class: 'commit-detail-meta' }, [
+                el('span', { class: 'avatar small', text: (commit.author || '?').charAt(0).toUpperCase() }),
+                el('span', { class: 'author', text: commit.author }),
+                el('span', { class: 'email', text: '<' + (commit.author_email || '') + '>' }),
+                el('span', { class: 'sep', text: '-' }),
+                el('span', { class: 'time', title: commit.date, text: relTime(commit.date) }),
+                el('span', { class: 'sep', text: '-' }),
+                el('span', { class: 'hash-pill', text: commit.short, title: commit.hash })
+            ]);
+            header.appendChild(metaLine);
+
+            // Parents
+            if (commit.parents && commit.parents.length) {
+                var parents = el('div', { class: 'commit-detail-parents' }, [
+                    el('span', { class: 'parents-label', text: commit.parents.length > 1 ? 'merges' : 'parent' })
+                ]);
+                commit.parents.forEach(function (p, i) {
+                    if (i > 0) parents.appendChild(el('span', { class: 'sep', text: ',' }));
+                    parents.appendChild(el('a', {
+                        href: '#/' + repoHash(route.repo, ref) + '/commit/' + p,
+                        class: 'hash-pill',
+                        text: p.slice(0, 7)
+                    }));
+                });
+                header.appendChild(parents);
+            }
+            main.appendChild(header);
+
+            // Stat summary
+            if (commit.stat) {
+                main.appendChild(el('pre', { class: 'commit-stat', text: commit.stat }));
+            }
+
+            // Diff view: tokenize lines client-side
+            if (commit.diff) {
+                main.appendChild(renderDiff(commit.diff));
+            }
+
+            layout.appendChild(main);
+            layout.appendChild(renderAboutSidebar(route.repo, info, null, ref));
+            $('#app').appendChild(layout);
+        }).catch(showError);
+    }
+
+    function renderDiff(rawDiff) {
+        var wrap = el('div', { class: 'diff-wrap' });
+        var lines = rawDiff.split('\n');
+        var fileBlock = null;
+        var pre = null;
+
+        function newFileBlock(fileHeader) {
+            if (fileBlock) wrap.appendChild(fileBlock);
+            fileBlock = el('div', { class: 'diff-file' });
+            fileBlock.appendChild(el('div', { class: 'diff-file-header', text: fileHeader }));
+            pre = el('pre', { class: 'diff-body' });
+            fileBlock.appendChild(pre);
+        }
+
+        lines.forEach(function (line) {
+            if (line.indexOf('diff --git') === 0) {
+                // a/<path> b/<path> at end
+                var m = line.match(/^diff --git a\/(.+) b\/(.+)$/);
+                var label = m ? (m[1] === m[2] ? m[1] : m[1] + ' -> ' + m[2]) : line;
+                newFileBlock(label);
+                return;
+            }
+            if (!pre) newFileBlock('(diff)');
+
+            var cls = 'ctx';
+            if (line.indexOf('@@') === 0) cls = 'hunk';
+            else if (line.indexOf('+++') === 0 || line.indexOf('---') === 0) cls = 'meta';
+            else if (line.indexOf('index ') === 0) cls = 'meta';
+            else if (line.indexOf('new file mode') === 0
+                  || line.indexOf('deleted file mode') === 0
+                  || line.indexOf('rename from') === 0
+                  || line.indexOf('rename to') === 0
+                  || line.indexOf('similarity index') === 0
+                  || line.indexOf('Binary files') === 0) cls = 'meta';
+            else if (line.charAt(0) === '+') cls = 'add';
+            else if (line.charAt(0) === '-') cls = 'del';
+
+            pre.appendChild(el('span', { class: 'diff-line ' + cls, text: line + '\n' }));
+        });
+        if (fileBlock) wrap.appendChild(fileBlock);
+        return wrap;
+    }
+
+    function viewRefs(route) {
+        showLoading();
+        var ref = route.ref || '';
+        api('repo', { name: route.repo }).then(function (info) {
+            var effectiveRef = ref || info.default_branch;
+            renderRepoHeader(route.repo, info, 'refs', ref);
+
+            var layout = el('div', { class: 'repo-layout' });
+            var main = el('div', { class: 'repo-main' });
+            main.appendChild(renderCodeToolbar(route.repo, info, effectiveRef));
 
             var section = function (title, refs, isBranch) {
                 var box = el('div');
@@ -1036,14 +1285,21 @@
                 }
                 var list = el('div', { class: 'ref-list' });
                 refs.forEach(function (r) {
-                    var nameEl = el('div', {
-                        class: 'name' + (isBranch && r.name === info.default_branch ? ' default' : ''),
+                    var isDefault = isBranch && r.name === info.default_branch;
+                    // Clicking a ref name jumps to the Code view at that ref.
+                    var nameEl = el('a', {
+                        class: 'name' + (isDefault ? ' default' : ''),
+                        href: '#/' + repoHash(route.repo, isDefault ? '' : r.name),
                         text: r.name
                     });
                     list.appendChild(el('div', { class: 'ref-row' }, [
                         nameEl,
                         el('div', { class: 'commit-info', text: r.subject + ' - ' + r.author + ' - ' + relTime(r.date) }),
-                        el('span', { class: 'hash-pill', text: r.hash.slice(0, 7) })
+                        el('a', {
+                            class: 'hash-pill',
+                            href: '#/' + repoHash(route.repo, '') + '/commit/' + r.hash,
+                            title: 'View commit'
+                        }, r.hash.slice(0, 7))
                     ]));
                 });
                 box.appendChild(list);
@@ -1053,7 +1309,7 @@
             main.appendChild(section('Tags',     info.tags     || [], false));
 
             layout.appendChild(main);
-            layout.appendChild(renderAboutSidebar(route.repo, info, null));
+            layout.appendChild(renderAboutSidebar(route.repo, info, null, ref));
             $('#app').appendChild(layout);
         }).catch(showError);
     }
@@ -1067,6 +1323,7 @@
         'tree':    viewTree,
         'blob':    viewBlob,
         'commits': viewCommits,
+        'commit':  viewCommit,
         'refs':    viewRefs
     };
 
