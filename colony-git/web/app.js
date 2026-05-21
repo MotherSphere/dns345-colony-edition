@@ -857,38 +857,61 @@
     function viewCode(route, isRoot) {
         showLoading();
         var path = route.path || '';
-        Promise.all([
-            api('repo',    { name: route.repo }),
-            api('treelog', { name: route.repo, ref: '', path: path }),
-            isRoot ? api('languages', { name: route.repo }) : Promise.resolve(null)
-        ]).then(function (results) {
-            var info  = results[0];
-            var tree  = results[1];
-            var langs = results[2];
 
+        // Single fast fetch first: repo metadata + (optionally) README content.
+        // Tree-with-last-commits and languages are slow on ARMv5 — defer them
+        // and overlay incrementally so the header/toolbar/README appear immediately.
+        api('repo', { name: route.repo, include_readme: isRoot ? 1 : '' })
+        .then(function (info) {
             renderRepoHeader(route.repo, info, 'code');
 
             var layout = el('div', { class: 'repo-layout' });
             var main   = el('div', { class: 'repo-main' });
-            var aside  = renderAboutSidebar(route.repo, info, langs);
+            var aside  = renderAboutSidebar(route.repo, info, null);  // langs added later
 
             main.appendChild(renderCodeToolbar(route.repo, info, info.default_branch));
 
-            // Latest commit strip ONLY at repo root (path empty).
             if (!path && info.head) {
                 var strip = renderLatestCommitStrip(route.repo, info.head, info.total_commits);
                 if (strip) main.appendChild(strip);
             }
-            main.appendChild(renderTreeV2(route.repo, info.default_branch, path, tree.entries));
 
-            if (!path && info.readme) {
+            // Tree placeholder - swapped in once treelog.cgi returns.
+            var treeSlot = el('div', { class: 'loading', text: 'Loading files...' });
+            main.appendChild(treeSlot);
+
+            // README only rendered when content was included (= isRoot path).
+            if (!path && info.readme && info.readme.content) {
                 main.appendChild(renderReadme(info.readme));
             }
 
             layout.appendChild(main);
             layout.appendChild(aside);
             $('#app').appendChild(layout);
-        }).catch(showError);
+
+            // Tree + per-file last commit (heaviest of the two slow fetches).
+            api('treelog', { name: route.repo, ref: '', path: path })
+                .then(function (tree) {
+                    var treeEl = renderTreeV2(route.repo, info.default_branch, path, tree.entries);
+                    treeSlot.replaceWith(treeEl);
+                })
+                .catch(function (err) {
+                    treeSlot.replaceWith(el('div', { class: 'error-box',
+                        text: 'Failed to load files: ' + (err.message || err) }));
+                });
+
+            // Languages chart (cached server-side keyed on HEAD - hits are fast).
+            if (isRoot) {
+                api('languages', { name: route.repo })
+                    .then(function (langs) {
+                        var newAside = renderAboutSidebar(route.repo, info, langs);
+                        aside.replaceWith(newAside);
+                        aside = newAside;  // keep handle in case we re-replace
+                    })
+                    .catch(function () { /* ignore: sidebar still works without langs */ });
+            }
+        })
+        .catch(showError);
     }
 
     function viewRepo(route) { viewCode(route, true); }

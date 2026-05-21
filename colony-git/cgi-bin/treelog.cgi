@@ -42,6 +42,12 @@ trap 'rm -f "$CMAP"' EXIT
 # Stream git log; awk emits one line per top-level entry under prefix.
 # Field separator is TAB. Subject may contain TABs but git collapses them
 # in single-line %s output - safe enough.
+#
+# Hard cap on commits walked: large/old repos with stable file sets touch
+# their root entries within the recent N commits; walking ALL history is
+# wasted work on ARMv5. Entries not touched in window stay last_commit:null
+# (frontend renders blank time/msg gracefully).
+HISTORY_LIMIT=${COLONY_GIT_TREELOG_LIMIT:-2000}
 if [ -n "$path" ]; then
     log_cmd_path=( -- "$path" )
 else
@@ -49,7 +55,7 @@ else
 fi
 
 # bash 4.1 + set -u + empty array workaround: ${arr[@]+"${arr[@]}"}
-git_in "$repo_dir" log "$ref" \
+git_in "$repo_dir" log "$ref" -n "$HISTORY_LIMIT" \
     --pretty=tformat:'>%h%x09%ct%x09%an%x09%s' \
     --name-only -m --no-renames \
     ${log_cmd_path[@]+"${log_cmd_path[@]}"} 2>/dev/null \

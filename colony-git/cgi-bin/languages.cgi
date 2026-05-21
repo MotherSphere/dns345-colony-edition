@@ -19,6 +19,29 @@ repo_dir=$(resolve_repo "$name")
 
 emit_headers
 
+# --- cache lookup ---
+# Cache key: the commit hash that <ref> resolves to right now. If the cache
+# file's first line matches, replay the rest of the file (the JSON body).
+# Else compute and overwrite atomically (write then mv).
+head_hash=$(git_in "$repo_dir" rev-parse "$ref" 2>/dev/null)
+cache_dir="$repo_dir/colony-cache"
+cache_file="$cache_dir/languages-$head_hash.json"
+
+if [ -n "$head_hash" ] && [ -f "$cache_file" ]; then
+    cat "$cache_file"
+    exit 0
+fi
+
+# Stream computation to a tmp file in the cache dir, then mv into place
+# (atomic on the same filesystem) so concurrent requests can't see a
+# partial cache file.
+mkdir -p "$cache_dir" 2>/dev/null
+# Drop other (older) cached results for this repo to bound disk usage.
+# We keep one entry per HEAD at a time; HEAD changes invalidate the rest.
+find "$cache_dir" -name 'languages-*.json' -type f ! -name "languages-$head_hash.json" -delete 2>/dev/null
+tmp_cache="$cache_dir/.tmp-langs-$$"
+trap 'rm -f "$tmp_cache"' EXIT
+
 # Binary extensions we always skip (case-insensitive comparison done in awk).
 SKIP_EXTS=".png .jpg .jpeg .gif .ico .webp .bmp .tiff
 .pdf .zip .tar .gz .tgz .bz2 .xz .7z .rar
@@ -98,4 +121,14 @@ git_in "$repo_dir" ls-tree -r -l "$ref" 2>/dev/null \
         }
         printf("}}\n");
     }
-'
+' > "$tmp_cache"
+
+# Emit the body to the HTTP response.
+cat "$tmp_cache"
+
+# Atomically install in cache (mv is atomic on same filesystem). If the
+# rename fails (rare), drop the tmp and move on - the next request will
+# recompute.
+if [ -n "$head_hash" ]; then
+    mv "$tmp_cache" "$cache_file" 2>/dev/null || rm -f "$tmp_cache"
+fi

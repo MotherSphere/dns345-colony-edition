@@ -14,6 +14,7 @@ set -u
 
 name=$(qs_get name)
 repo_dir=$(resolve_repo "$name")
+include_readme=$(qs_get include_readme)
 
 emit_headers
 
@@ -86,9 +87,24 @@ for candidate in README.md readme.md Readme.md README.markdown README README.txt
     IFS=$saved_ifs
 done
 IFS=$saved_ifs
-if [ -n "$readme_path" ]; then
-    # cap at 256 KB to avoid blowing JSON size
-    readme_content=$(git_in "$repo_dir" show "HEAD:$readme_path" 2>/dev/null | /ffp/bin/head -c 262144)
+if [ -n "$readme_path" ] && [ "$include_readme" = "1" ]; then
+    # cap at 256 KB to avoid blowing JSON size, then JSON-escape via gawk
+    # in a single streaming pass. Bash's ${s//pat/rep} expansion on a 13 KB
+    # string takes ~20s on the NAS's bash 4.1.11 (quadratic on big strings),
+    # gawk processes the same content in milliseconds.
+    readme_content=$(git_in "$repo_dir" show "HEAD:$readme_path" 2>/dev/null \
+        | /ffp/bin/head -c 262144 \
+        | /ffp/bin/awk '
+            BEGIN { ORS = ""; first = 1 }
+            {
+                gsub(/\\/, "\\\\");
+                gsub(/"/, "\\\"");
+                gsub(/\t/, "\\t");
+                gsub(/\r/, "");
+                if (!first) print "\\n";
+                first = 0;
+                print $0;
+            }')
 fi
 
 # --- LICENSE detection: same case-insensitive scan over root tree ---
@@ -129,9 +145,18 @@ printf '"tags":['
 emit_ref_list refs/tags/ refs/tags/
 printf '],'
 if [ -n "$readme_path" ]; then
-    printf '"readme":{"path":"%s","content":"%s"}' \
-        "$(json_escape_value "$readme_path")" \
-        "$(json_escape_value "$readme_content")"
+    if [ "$include_readme" = "1" ]; then
+        # readme_content was already JSON-escaped via gawk above (avoiding
+        # bash's quadratic ${s//pat/rep} on big strings). Don't double-escape.
+        printf '"readme":{"path":"%s","content":"%s"}' \
+            "$(json_escape_value "$readme_path")" \
+            "$readme_content"
+    else
+        # Path-only emission - lets sidebar link to the README without
+        # paying for the content read on every view (blob, commits, refs).
+        printf '"readme":{"path":"%s","content":null}' \
+            "$(json_escape_value "$readme_path")"
+    fi
 else
     printf '"readme":null'
 fi
