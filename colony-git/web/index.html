@@ -26,6 +26,9 @@
         <div class="searchbox">
             <input id="search-input" type="search" placeholder="Search repos..." autocomplete="off">
         </div>
+        <span id="whoami-pill" class="topbar-user hidden"></span>
+        <button id="signin-btn" class="topbar-cta topbar-cta--ghost" type="button">Sign in</button>
+        <a class="topbar-cta" href="signup.html">Sign up</a>
     </div>
 </header>
 
@@ -47,5 +50,80 @@
 
 <script src="vendor/highlight.min.js"></script>
 <script src="app.js"></script>
+<script>
+// Topbar auth: "Sign in" triggers whoami.cgi which returns 401 unless the
+// browser sends Basic creds. Once authenticated, the browser caches those
+// creds for the session and whoami responds with the username, which we
+// pin into the topbar. There is no server-side session, so "signing out"
+// means closing the tab (HTTP basic auth has no logout primitive).
+(function () {
+    var btn  = document.getElementById('signin-btn');
+    var pill = document.getElementById('whoami-pill');
+    if (!btn || !pill) return;
+
+    function showUser(name) {
+        pill.textContent = 'Hi, ' + name;
+        pill.classList.remove('hidden');
+        btn.classList.add('hidden');
+    }
+
+    function probe(triggerPopup) {
+        // credentials: 'include' lets the browser send any cached basic creds
+        // for this origin. If the user already authenticated this session,
+        // we get 200 + {user}. Else we get 401, and if triggerPopup is true
+        // we want the browser to surface its native credential prompt.
+        return fetch('/colony-git/whoami.cgi', {
+            credentials: 'include',
+            cache: 'no-store'
+        }).then(function (r) {
+            if (r.status === 200) return r.json();
+            if (r.status === 401 && triggerPopup) {
+                // Force a synchronous-feeling popup by reloading the resource
+                // in a way the browser must prompt for. The cleanest cross-
+                // browser trick is to navigate the same URL: the browser then
+                // shows its basic-auth dialog, and on success returns 200.
+                // Window.location swaps origin, so we fetch with explicit auth
+                // by using an iframe-less XHR that defers prompt to the browser.
+                return fetch('/colony-git/whoami.cgi', {
+                    credentials: 'include',
+                    cache: 'no-store'
+                }).then(function (r2) {
+                    return r2.status === 200 ? r2.json() : null;
+                });
+            }
+            return null;
+        }).catch(function () { return null; });
+    }
+
+    // On load, silently check if creds are already cached -> show pill.
+    probe(false).then(function (j) {
+        if (j && j.user) showUser(j.user);
+    });
+
+    btn.addEventListener('click', function () {
+        // A fetch alone won't pop the browser dialog reliably across browsers.
+        // The reliable trick is to navigate to the auth-gated URL in a hidden
+        // iframe: the browser will surface its credential prompt, then once
+        // the user provides creds, the iframe loads 200, and our next
+        // whoami fetch sees the cached creds and returns the username.
+        var iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.width = '1px';
+        iframe.style.height = '1px';
+        iframe.style.opacity = '0';
+        iframe.style.pointerEvents = 'none';
+        iframe.src = '/colony-git/whoami.cgi?_=' + Date.now();
+        iframe.addEventListener('load', function () {
+            // iframe finished (either user signed in or cancelled).
+            probe(false).then(function (j) {
+                if (j && j.user) showUser(j.user);
+            }).then(function () {
+                setTimeout(function () { iframe.remove(); }, 100);
+            });
+        });
+        document.body.appendChild(iframe);
+    });
+})();
+</script>
 </body>
 </html>

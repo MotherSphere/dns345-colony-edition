@@ -233,7 +233,9 @@
                 show('success',
                     'Account <strong>' + safeUser + '</strong> created.<br><br>' +
                     'Clone a repository with:' +
-                    '<pre>git clone http://' + safeUser + ':PASSWORD@' + location.host + '/colony-git/repos/REPO.git</pre>'
+                    '<pre>git clone http://' + location.host + '/colony-git/repos/REPO.git</pre>' +
+                    'git will prompt for your username and password the first time. ' +
+                    '<a href="/colony-git/">Back to repositories</a>.'
                 );
                 form.reset();
             } else {

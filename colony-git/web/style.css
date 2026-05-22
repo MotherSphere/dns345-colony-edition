@@ -120,6 +120,42 @@ a:hover { color: var(--red-hover); text-decoration: underline; }
     box-shadow: 0 0 0 2px var(--red-faint);
 }
 
+.topbar-cta {
+    background: var(--red);
+    color: var(--bg);
+    border: 1px solid var(--red);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: background 80ms ease, color 80ms ease;
+}
+.topbar-cta:hover {
+    background: var(--red-hover);
+    color: var(--bg);
+    text-decoration: none;
+}
+.topbar-cta--ghost {
+    background: transparent;
+    color: var(--red);
+}
+.topbar-cta--ghost:hover {
+    background: var(--red-faint);
+    color: var(--red);
+}
+.topbar-user {
+    background: var(--bg);
+    border: 1px solid var(--ink-faint);
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
 /* ============== app body ============== */
 #app {
     flex: 1;
