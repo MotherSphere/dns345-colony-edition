@@ -129,6 +129,13 @@ printf '%s:%s\n' "$USER" "$HASH" >> "$TMP"
 chmod 600 "$TMP"
 mv "$TMP" "$HTPASSWD"
 
+# -- Per-user sidecar (joined timestamp, future profile fields) -------------
+USERS_DIR=${COLONY_GIT_USERS_DIR:-/mnt/HD/HD_a2/ffp/etc/colony-git-users}
+mkdir -p "$USERS_DIR" 2>/dev/null
+chmod 755 "$USERS_DIR"
+printf 'joined=%s\n' "$(date +%s)" > "$USERS_DIR/$USER"
+chmod 644 "$USERS_DIR/$USER"
+
 # -- Success ----------------------------------------------------------------
 emit_json
 printf '{"ok":true,"user":"%s"}\n' "$USER"

@@ -30,9 +30,18 @@ for repo_dir in "$REPOS_ROOT"/*.git; do
         esac
     fi
 
-    # Owner: passwd entry for the dir's UID (best effort).
-    owner_uid=$(stat -c '%u' "$repo_dir" 2>/dev/null)
-    owner=$(getent passwd "$owner_uid" 2>/dev/null | cut -d: -f1)
+    # Owner: prefer the explicit `owner` file (written by repo-create.cgi
+    # or backfilled manually); fall back to the passwd entry for the
+    # repo's UID, then to "user". The Colony auth system uses htpasswd
+    # accounts that have no system UID, so the file is the canonical source.
+    owner=""
+    if [ -f "$repo_dir/owner" ]; then
+        owner=$(head -n 1 "$repo_dir/owner" 2>/dev/null)
+    fi
+    if [ -z "$owner" ]; then
+        owner_uid=$(stat -c '%u' "$repo_dir" 2>/dev/null)
+        owner=$(getent passwd "$owner_uid" 2>/dev/null | cut -d: -f1)
+    fi
     [ -z "$owner" ] && owner="user"
 
     # HEAD branch: git 1.7.8 has no --short flag; strip refs/heads/ ourselves.

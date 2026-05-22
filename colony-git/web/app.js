@@ -811,6 +811,11 @@
         var parts = path.slice(1).split('/').map(decodeURIComponent);
         if (parts.length === 0 || parts[0] === '') return { view: 'home' };
 
+        // /u/<username>  -> user profile view (no repo context).
+        if (parts[0] === 'u' && parts.length >= 2) {
+            return { view: 'profile', user: parts[1] };
+        }
+
         // The repo segment may carry a ref via @ref suffix: foo.git@feature-x
         var repoSeg = parts[0];
         var atIdx = repoSeg.indexOf('@');
@@ -830,6 +835,11 @@
     function renderCrumbs(route) {
         var c = $('#crumbs');
         c.innerHTML = '';
+        if (route.view === 'profile' && route.user) {
+            c.appendChild(el('span', { class: 'sep', text: '/' }));
+            c.appendChild(el('span', null, '@' + route.user));
+            return;
+        }
         if (route.view === 'home' && !route.repo) return;
         c.appendChild(el('span', { class: 'sep', text: '/' }));
         c.appendChild(el('a', { href: '#/' + encodeURIComponent(route.repo) }, route.repo));
@@ -837,6 +847,16 @@
             c.appendChild(el('span', { class: 'sep', text: '/' }));
             c.appendChild(el('span', null, route.view));
         }
+    }
+
+    // Same initials function used by index.html's topbar JS; duplicated
+    // here because app.js is loaded as a separate <script>.
+    function initialsFor(name) {
+        var parts = String(name || '').split(/[-_\s]+/).filter(Boolean);
+        var chars = parts.length > 1
+            ? parts[0][0] + parts[1][0]
+            : String(name || '?').slice(0, 2);
+        return chars.toUpperCase();
     }
 
     // -----------------------------------------------------------------
@@ -1318,20 +1338,117 @@
     // Dispatch
     // -----------------------------------------------------------------
 
+    // -----------------------------------------------------------------
+    // Profile view (#/u/<name>)
+    // -----------------------------------------------------------------
+
+    function viewProfile(route) {
+        showLoading();
+        api('user', { name: route.user })
+            .then(function (data) {
+                if (data.error) throw new Error(data.error);
+                renderProfile(data);
+            })
+            .catch(function (e) {
+                $('#app').innerHTML = '';
+                $('#app').appendChild(el('div', {
+                    class: 'empty',
+                    text: 'profile not available: ' + e.message
+                }));
+            });
+    }
+
+    function renderProfile(data) {
+        $('#app').innerHTML = '';
+        var name = data.username;
+
+        // Header banner: large initials avatar + identity + joined.
+        var header = el('section', { class: 'profile-header' });
+        header.appendChild(el('div', { class: 'profile-avatar' }, [
+            el('span', { class: 'user-menu-initials', text: initialsFor(name) })
+        ]));
+        var ident = el('div', { class: 'profile-ident' });
+        ident.appendChild(el('h1', { class: 'profile-name', text: name }));
+        var bits = [];
+        if (data.joined) {
+            var joinedDate = new Date(data.joined * 1000);
+            bits.push(el('span', null, [
+                el('span', { class: 'profile-tag', text: 'joined' }),
+                joinedDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+            ]));
+        }
+        bits.push(el('span', null, [
+            el('span', { class: 'profile-tag', text: 'repos' }),
+            String(data.repos.length)
+        ]));
+        var totalCommits = data.repos.reduce(function (a, r) { return a + (r.commit_count || 0); }, 0);
+        bits.push(el('span', null, [
+            el('span', { class: 'profile-tag', text: 'commits' }),
+            String(totalCommits)
+        ]));
+        var metaRow = el('div', { class: 'profile-meta' });
+        bits.forEach(function (b) { metaRow.appendChild(b); });
+        ident.appendChild(metaRow);
+        header.appendChild(ident);
+        $('#app').appendChild(header);
+
+        // Repos section header + grid (reuses .repo-grid + .repo-card from home).
+        var sectionTitle = el('h2', { class: 'profile-section-title' }, [
+            'Repositories ',
+            el('span', { class: 'profile-section-count', text: String(data.repos.length) })
+        ]);
+        $('#app').appendChild(sectionTitle);
+
+        if (!data.repos.length) {
+            $('#app').appendChild(el('div', {
+                class: 'empty',
+                text: name + ' has no repositories yet.'
+            }));
+            return;
+        }
+
+        data.repos.sort(function (a, b) {
+            return (parseGitDate(b.last_commit_at) || 0) - (parseGitDate(a.last_commit_at) || 0);
+        });
+        var grid = el('div', { class: 'repo-grid' });
+        data.repos.forEach(function (r) {
+            var card = el('div', { class: 'repo-card', 'data-name': r.name });
+            card.appendChild(el('a', {
+                class: 'title',
+                href: '#/' + encodeURIComponent(r.name)
+            }, r.name.replace(/\.git$/, '')));
+            card.appendChild(el('div', { class: 'desc' },
+                r.description || el('em', { text: 'no description' })));
+            var meta = el('div', { class: 'meta' });
+            meta.appendChild(el('div', { class: 'commit-info', text:
+                r.last_commit_subject
+                    ? r.last_commit_author + ' - ' + relTime(r.last_commit_at)
+                    : 'no commits' }));
+            meta.appendChild(el('div', { class: 'sizes', text:
+                (r.commit_count || 0) + ' commits   ' + fmtBytes(r.size_bytes) }));
+            card.appendChild(meta);
+            grid.appendChild(card);
+        });
+        $('#app').appendChild(grid);
+    }
+
     var ROUTES = {
         'home':    viewRepo,
         'tree':    viewTree,
         'blob':    viewBlob,
         'commits': viewCommits,
         'commit':  viewCommit,
-        'refs':    viewRefs
+        'refs':    viewRefs,
+        'profile': viewProfile
     };
 
     function dispatch() {
         closePopover();
         var route = parseRoute();
         renderCrumbs(route);
-        if (route.view === 'home' && !route.repo) {
+        if (route.view === 'profile') {
+            viewProfile(route);
+        } else if (route.view === 'home' && !route.repo) {
             viewHome();
         } else {
             var fn = ROUTES[route.view];

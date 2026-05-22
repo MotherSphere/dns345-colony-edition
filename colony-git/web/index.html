@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Colony Git</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -26,8 +26,41 @@
         <div class="searchbox">
             <input id="search-input" type="search" placeholder="Search repos..." autocomplete="off">
         </div>
-        <span id="whoami-pill" class="topbar-user hidden"></span>
-        <button id="signin-btn" class="topbar-cta topbar-cta--ghost" type="button">Sign in</button>
+        <div id="whoami-menu" class="user-menu hidden">
+            <button id="whoami-trigger" class="user-menu-avatar" type="button" aria-haspopup="menu" aria-expanded="false">
+                <span id="whoami-initials" class="user-menu-initials">?</span>
+            </button>
+            <div id="whoami-dropdown" class="user-menu-panel hidden" role="menu">
+                <div class="user-menu-header">
+                    <div class="user-menu-avatar user-menu-avatar--large" aria-hidden="true">
+                        <span id="whoami-initials-large" class="user-menu-initials">?</span>
+                    </div>
+                    <div class="user-menu-id">
+                        <div id="whoami-username" class="user-menu-username"></div>
+                        <div class="user-menu-tagline">Signed in to Colony Git</div>
+                    </div>
+                </div>
+                <div class="user-menu-divider"></div>
+                <div class="user-menu-section">
+                    <a id="profile-link" class="user-menu-item" role="menuitem" href="#/">
+                        <span class="user-menu-glyph">@</span>
+                        Profile
+                    </a>
+                    <a id="your-repos-link" class="user-menu-item" role="menuitem" href="#/">
+                        <span class="user-menu-glyph">#</span>
+                        Your repositories
+                    </a>
+                </div>
+                <div class="user-menu-divider"></div>
+                <div class="user-menu-section">
+                    <button id="signout-btn" class="user-menu-item user-menu-item--action" type="button" role="menuitem">
+                        <span class="user-menu-glyph">⊳</span>
+                        Sign out
+                    </button>
+                </div>
+            </div>
+        </div>
+        <a id="signin-link" class="topbar-cta topbar-cta--ghost" href="login.html">Sign in</a>
         <a class="topbar-cta" href="signup.html">Sign up</a>
     </div>
 </header>
@@ -49,79 +82,93 @@
 </footer>
 
 <script src="vendor/highlight.min.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
 <script>
-// Topbar auth: "Sign in" triggers whoami.cgi which returns 401 unless the
-// browser sends Basic creds. Once authenticated, the browser caches those
-// creds for the session and whoami responds with the username, which we
-// pin into the topbar. There is no server-side session, so "signing out"
-// means closing the tab (HTTP basic auth has no logout primitive).
+// Topbar auth: real cookie session via /login.cgi + /logout.cgi.
+// On page load we probe /whoami.cgi - if it returns {user: <name>} we hide
+// the Sign in / Sign up buttons and show a "Hi, <name>" dropdown with a
+// Sign out item. Logout posts to /logout.cgi which clears the cookie.
 (function () {
-    var btn  = document.getElementById('signin-btn');
-    var pill = document.getElementById('whoami-pill');
-    if (!btn || !pill) return;
+    var menu          = document.getElementById('whoami-menu');
+    var trigger       = document.getElementById('whoami-trigger');
+    var dropdown      = document.getElementById('whoami-dropdown');
+    var initialsSmall = document.getElementById('whoami-initials');
+    var initialsLarge = document.getElementById('whoami-initials-large');
+    var usernameNode  = document.getElementById('whoami-username');
+    var signOut       = document.getElementById('signout-btn');
+    var signIn        = document.getElementById('signin-link');
+    if (!menu || !trigger || !dropdown || !signOut || !signIn) return;
 
-    function showUser(name) {
-        pill.textContent = 'Hi, ' + name;
-        pill.classList.remove('hidden');
-        btn.classList.add('hidden');
+    function initialsFor(name) {
+        // Take the first letter of each "word" chunk in the username,
+        // up to 2 chars. underscore/hyphen split. Falls back to the first
+        // two characters for plain alphanumeric names.
+        var parts = name.split(/[-_\s]+/).filter(Boolean);
+        var chars = parts.length > 1
+            ? parts[0][0] + parts[1][0]
+            : name.slice(0, 2);
+        return chars.toUpperCase();
     }
 
-    function probe(triggerPopup) {
-        // credentials: 'include' lets the browser send any cached basic creds
-        // for this origin. If the user already authenticated this session,
-        // we get 200 + {user}. Else we get 401, and if triggerPopup is true
-        // we want the browser to surface its native credential prompt.
-        return fetch('/colony-git/whoami.cgi', {
-            credentials: 'include',
-            cache: 'no-store'
-        }).then(function (r) {
-            if (r.status === 200) return r.json();
-            if (r.status === 401 && triggerPopup) {
-                // Force a synchronous-feeling popup by reloading the resource
-                // in a way the browser must prompt for. The cleanest cross-
-                // browser trick is to navigate the same URL: the browser then
-                // shows its basic-auth dialog, and on success returns 200.
-                // Window.location swaps origin, so we fetch with explicit auth
-                // by using an iframe-less XHR that defers prompt to the browser.
-                return fetch('/colony-git/whoami.cgi', {
-                    credentials: 'include',
-                    cache: 'no-store'
-                }).then(function (r2) {
-                    return r2.status === 200 ? r2.json() : null;
-                });
-            }
-            return null;
-        }).catch(function () { return null; });
+    function setLoggedIn(name) {
+        var inits = initialsFor(name);
+        initialsSmall.textContent = inits;
+        initialsLarge.textContent = inits;
+        usernameNode.textContent = name;
+        menu.classList.remove('hidden');
+        signIn.classList.add('hidden');
+        var profileLink = document.getElementById('profile-link');
+        var yourReposLink = document.getElementById('your-repos-link');
+        if (profileLink)  profileLink.href  = '#/u/' + encodeURIComponent(name);
+        if (yourReposLink) yourReposLink.href = '#/u/' + encodeURIComponent(name);
     }
 
-    // On load, silently check if creds are already cached -> show pill.
-    probe(false).then(function (j) {
-        if (j && j.user) showUser(j.user);
+    function setLoggedOut() {
+        menu.classList.add('hidden');
+        dropdown.classList.add('hidden');
+        trigger.setAttribute('aria-expanded', 'false');
+        signIn.classList.remove('hidden');
+    }
+
+    fetch('/colony-git/whoami.cgi', {
+        credentials: 'include',
+        cache: 'no-store'
+    })
+    .then(function (r) { return r.ok ? r.json() : { user: null }; })
+    .then(function (j) {
+        if (j && j.user) setLoggedIn(j.user); else setLoggedOut();
+    })
+    .catch(function () { setLoggedOut(); });
+
+    trigger.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var isOpen = !dropdown.classList.contains('hidden');
+        dropdown.classList.toggle('hidden');
+        trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
     });
 
-    btn.addEventListener('click', function () {
-        // A fetch alone won't pop the browser dialog reliably across browsers.
-        // The reliable trick is to navigate to the auth-gated URL in a hidden
-        // iframe: the browser will surface its credential prompt, then once
-        // the user provides creds, the iframe loads 200, and our next
-        // whoami fetch sees the cached creds and returns the username.
-        var iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.width = '1px';
-        iframe.style.height = '1px';
-        iframe.style.opacity = '0';
-        iframe.style.pointerEvents = 'none';
-        iframe.src = '/colony-git/whoami.cgi?_=' + Date.now();
-        iframe.addEventListener('load', function () {
-            // iframe finished (either user signed in or cancelled).
-            probe(false).then(function (j) {
-                if (j && j.user) showUser(j.user);
-            }).then(function () {
-                setTimeout(function () { iframe.remove(); }, 100);
-            });
+    document.addEventListener('click', function (ev) {
+        if (!menu.contains(ev.target)) {
+            dropdown.classList.add('hidden');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') {
+            dropdown.classList.add('hidden');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    signOut.addEventListener('click', function () {
+        fetch('/colony-git/logout.cgi', {
+            method: 'POST',
+            credentials: 'include',
+            cache: 'no-store'
+        }).then(function () {
+            setLoggedOut();
         });
-        document.body.appendChild(iframe);
     });
 })();
 </script>
