@@ -874,42 +874,94 @@
             repos.sort(function (a, b) {
                 return (parseGitDate(b.last_commit_at) || 0) - (parseGitDate(a.last_commit_at) || 0);
             });
-            var grid = el('div', { class: 'repo-grid' });
-            repos.forEach(function (r) {
-                var card = el('div', { class: 'repo-card', 'data-name': r.name, 'data-desc': r.description || '' });
-                card.appendChild(el('a', {
-                    class: 'title',
-                    href: '#/' + encodeURIComponent(r.name)
-                }, r.name.replace(/\.git$/, '')));
-                card.appendChild(el('div', { class: 'desc' }, r.description || el('em', { text: 'no description' })));
-                var meta = el('div', { class: 'meta' });
-                meta.appendChild(el('div', { class: 'commit-info', text:
-                    r.last_commit_subject
-                        ? r.last_commit_author + ' - ' + relTime(r.last_commit_at)
-                        : 'no commits' }));
-                // Language badge (uses cache when present; absent for cold repos until first browse / post-receive)
-                if (r.dominant_ext) {
-                    var lang = langInfo(r.dominant_ext);
-                    var langBadge = el('span', { class: 'badge lang-badge', title: 'Dominant language' }, [
-                        (function () {
-                            var d = el('span', { class: 'lang-dot' });
-                            d.style.background = lang.color;
-                            return d;
-                        })(),
-                        lang.name
-                    ]);
-                    meta.appendChild(langBadge);
+
+            // Owner filter toolbar: All vs Yours. The Yours tab is hidden
+            // until the topbar JS publishes a logged-in user.
+            var toolbar = el('nav', { class: 'home-toolbar' });
+            var currentUser = window.__COLONY_USER__;
+            var savedMode   = sessionStorage.getItem('colony.home.mode') || 'all';
+            var mode = (savedMode === 'yours' && currentUser) ? 'yours' : 'all';
+            var allCount   = repos.length;
+            var yoursCount = currentUser
+                ? repos.filter(function (r) { return r.owner === currentUser; }).length
+                : 0;
+
+            function tab(modeName, label, count) {
+                var b = el('button', {
+                    type: 'button',
+                    class: 'home-tab' + (mode === modeName ? ' home-tab--active' : '')
+                }, [label, el('span', { class: 'home-tab-count', text: String(count) })]);
+                b.addEventListener('click', function () {
+                    if (mode === modeName) return;
+                    mode = modeName;
+                    sessionStorage.setItem('colony.home.mode', mode);
+                    redraw();
+                });
+                return b;
+            }
+            toolbar.appendChild(tab('all', 'All repositories', allCount));
+            if (currentUser) {
+                toolbar.appendChild(tab('yours', 'Yours', yoursCount));
+            }
+            $('#app').appendChild(toolbar);
+
+            var gridHost = el('div');
+            $('#app').appendChild(gridHost);
+
+            function redraw() {
+                gridHost.innerHTML = '';
+                // Update tab active class without re-rendering toolbar.
+                toolbar.querySelectorAll('.home-tab').forEach(function (t, i) {
+                    var label = (i === 0) ? 'all' : 'yours';
+                    t.classList.toggle('home-tab--active', mode === label);
+                });
+                var filtered = mode === 'yours'
+                    ? repos.filter(function (r) { return r.owner === currentUser; })
+                    : repos;
+                if (!filtered.length) {
+                    gridHost.appendChild(el('div', { class: 'empty',
+                        text: mode === 'yours'
+                            ? 'You have no repositories yet. Click + to create one.'
+                            : 'No repos found.' }));
+                    return;
                 }
-                if (r.file_count) {
-                    meta.appendChild(el('span', { class: 'badge', text: r.file_count + ' files' }));
-                }
-                meta.appendChild(el('span', { class: 'badge', text: r.commit_count + ' commits' }));
-                meta.appendChild(el('span', { class: 'badge', text: fmtBytes(r.size_bytes) }));
-                card.appendChild(meta);
-                grid.appendChild(card);
-            });
-            $('#app').appendChild(grid);
-            applySearchFilter();
+                var grid = el('div', { class: 'repo-grid' });
+                filtered.forEach(function (r) {
+                    var card = el('div', { class: 'repo-card', 'data-name': r.name, 'data-desc': r.description || '' });
+                    card.appendChild(el('a', {
+                        class: 'title',
+                        href: '#/' + encodeURIComponent(r.name)
+                    }, r.name.replace(/\.git$/, '')));
+                    card.appendChild(el('div', { class: 'desc' }, r.description || el('em', { text: 'no description' })));
+                    var meta = el('div', { class: 'meta' });
+                    meta.appendChild(el('div', { class: 'commit-info', text:
+                        r.last_commit_subject
+                            ? r.last_commit_author + ' - ' + relTime(r.last_commit_at)
+                            : 'no commits' }));
+                    if (r.dominant_ext) {
+                        var lang = langInfo(r.dominant_ext);
+                        var langBadge = el('span', { class: 'badge lang-badge', title: 'Dominant language' }, [
+                            (function () {
+                                var d = el('span', { class: 'lang-dot' });
+                                d.style.background = lang.color;
+                                return d;
+                            })(),
+                            lang.name
+                        ]);
+                        meta.appendChild(langBadge);
+                    }
+                    if (r.file_count) {
+                        meta.appendChild(el('span', { class: 'badge', text: r.file_count + ' files' }));
+                    }
+                    meta.appendChild(el('span', { class: 'badge', text: r.commit_count + ' commits' }));
+                    meta.appendChild(el('span', { class: 'badge', text: fmtBytes(r.size_bytes) }));
+                    card.appendChild(meta);
+                    grid.appendChild(card);
+                });
+                gridHost.appendChild(grid);
+                applySearchFilter();
+            }
+            redraw();
         }).catch(showError);
     }
 
@@ -942,11 +994,17 @@
             if (count != null) a.appendChild(el('span', { class: 'count', text: '(' + count + ')' }));
             return a;
         }
-        var tabs = el('nav', { class: 'tabs' }, [
+        var tabsChildren = [
             tab('code', 'Code'),
             tab('commits', 'Commits'),
             tab('refs', 'Branches', nB + nT)
-        ]);
+        ];
+        // Settings tab is owner-only. info.owner is populated by repo.cgi
+        // (newly added to the response). Falls back gracefully when missing.
+        if (info.owner && window.__COLONY_USER__ === info.owner) {
+            tabsChildren.push(tab('settings', 'Settings'));
+        }
+        var tabs = el('nav', { class: 'tabs' }, tabsChildren);
         $('#app').appendChild(tabs);
     }
 
@@ -1432,14 +1490,147 @@
         $('#app').appendChild(grid);
     }
 
+    // -----------------------------------------------------------------
+    // Settings view (owner-only)
+    // -----------------------------------------------------------------
+
+    function viewSettings(route) {
+        showLoading();
+        api('repo', { name: route.repo, include_readme: '' })
+        .then(function (info) {
+            if (info.owner !== window.__COLONY_USER__) {
+                $('#app').innerHTML = '';
+                $('#app').appendChild(el('div', { class: 'empty',
+                    text: 'You are not the owner of this repository.' }));
+                return;
+            }
+            renderRepoHeader(route.repo, info, 'settings', '');
+            renderSettings(route.repo, info);
+        })
+        .catch(showError);
+    }
+
+    function renderSettings(repo, info) {
+        var wrap = el('div', { class: 'settings-wrap' });
+
+        // -- Edit description card ----------------------------------
+        var box1 = el('section', { class: 'settings-card' });
+        box1.appendChild(el('h2', { class: 'settings-h', text: 'Repository details' }));
+
+        var descLabel = el('label', { class: 'settings-label', text: 'Description' });
+        var descInput = el('input', {
+            type: 'text', maxlength: '200',
+            value: info.description || '',
+            class: 'settings-input'
+        });
+        var descSave  = el('button', { class: 'settings-btn settings-btn--primary', text: 'Save changes' });
+        var descMsg   = el('div', { class: 'settings-msg', hidden: '' });
+        descSave.addEventListener('click', function () {
+            descSave.disabled = true;
+            descSave.textContent = 'Saving...';
+            descMsg.hidden = true;
+            fetch('/colony-git/repo-update.cgi', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'name=' + encodeURIComponent(repo) + '&description=' + encodeURIComponent(descInput.value)
+            })
+            .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+            .then(function (res) {
+                if (res.body && res.body.ok) {
+                    descMsg.className = 'settings-msg settings-msg--ok';
+                    descMsg.textContent = 'Saved.';
+                } else {
+                    descMsg.className = 'settings-msg settings-msg--err';
+                    descMsg.textContent = (res.body && res.body.error) || 'failed';
+                }
+                descMsg.hidden = false;
+                descSave.disabled = false;
+                descSave.textContent = 'Save changes';
+            })
+            .catch(function (e) {
+                descMsg.className = 'settings-msg settings-msg--err';
+                descMsg.textContent = 'network error: ' + String(e);
+                descMsg.hidden = false;
+                descSave.disabled = false;
+                descSave.textContent = 'Save changes';
+            });
+        });
+        box1.appendChild(descLabel);
+        box1.appendChild(descInput);
+        box1.appendChild(descSave);
+        box1.appendChild(descMsg);
+
+        wrap.appendChild(box1);
+
+        // -- Danger zone -------------------------------------------
+        var displayName = repo.replace(/\.git$/, '');
+        var dz = el('section', { class: 'settings-card settings-card--danger' });
+        dz.appendChild(el('h2', { class: 'settings-h settings-h--danger', text: 'Danger zone' }));
+        dz.appendChild(el('p', { class: 'settings-warn',
+            text: 'Deleting this repository removes all branches, tags and commits from the NAS. There is no undo.' }));
+        var dzLabel = el('label', { class: 'settings-label',
+            text: 'Type "' + displayName + '" to confirm:' });
+        var dzInput = el('input', { type: 'text', class: 'settings-input' });
+        var dzBtn   = el('button', { class: 'settings-btn settings-btn--danger', text: 'Delete this repository' });
+        var dzMsg   = el('div', { class: 'settings-msg', hidden: '' });
+
+        function refreshDzBtn() {
+            dzBtn.disabled = (dzInput.value !== displayName && dzInput.value !== repo);
+        }
+        dzInput.addEventListener('input', refreshDzBtn);
+        refreshDzBtn();
+
+        dzBtn.addEventListener('click', function () {
+            if (!confirm('Permanently delete ' + repo + '?')) return;
+            dzBtn.disabled = true;
+            dzBtn.textContent = 'Deleting...';
+            dzMsg.hidden = true;
+            fetch('/colony-git/repo-delete.cgi', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'name=' + encodeURIComponent(repo) + '&confirm=' + encodeURIComponent(dzInput.value)
+            })
+            .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+            .then(function (res) {
+                if (res.body && res.body.ok) {
+                    location.replace('/colony-git/');
+                    return;
+                }
+                dzMsg.className = 'settings-msg settings-msg--err';
+                dzMsg.textContent = (res.body && res.body.error) || 'failed';
+                dzMsg.hidden = false;
+                dzBtn.disabled = false;
+                dzBtn.textContent = 'Delete this repository';
+            })
+            .catch(function (e) {
+                dzMsg.className = 'settings-msg settings-msg--err';
+                dzMsg.textContent = 'network error: ' + String(e);
+                dzMsg.hidden = false;
+                dzBtn.disabled = false;
+                dzBtn.textContent = 'Delete this repository';
+            });
+        });
+
+        dz.appendChild(dzLabel);
+        dz.appendChild(dzInput);
+        dz.appendChild(dzBtn);
+        dz.appendChild(dzMsg);
+
+        wrap.appendChild(dz);
+        $('#app').appendChild(wrap);
+    }
+
     var ROUTES = {
-        'home':    viewRepo,
-        'tree':    viewTree,
-        'blob':    viewBlob,
-        'commits': viewCommits,
-        'commit':  viewCommit,
-        'refs':    viewRefs,
-        'profile': viewProfile
+        'home':     viewRepo,
+        'tree':     viewTree,
+        'blob':     viewBlob,
+        'commits':  viewCommits,
+        'commit':   viewCommit,
+        'refs':     viewRefs,
+        'profile':  viewProfile,
+        'settings': viewSettings
     };
 
     function dispatch() {

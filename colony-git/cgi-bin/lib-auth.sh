@@ -16,6 +16,23 @@ HTPASSWD=${COLONY_GIT_HTPASSWD:-/mnt/HD/HD_a2/ffp/etc/colony-git.htpasswd}
 SESSION_DIR=${COLONY_GIT_SESSION_DIR:-/mnt/HD/HD_a2/ffp/etc/colony-git-sessions}
 SESSION_TTL=${COLONY_GIT_SESSION_TTL:-2592000}   # 30 days in seconds
 COOKIE_NAME=colony_session
+TOKEN_DIR=${COLONY_GIT_TOKEN_DIR:-/mnt/HD/HD_a2/ffp/etc/colony-git-tokens}
+
+# Look up a Personal Access Token. PATs are 40 hex chars from /dev/urandom
+# created via token-create.cgi and stored as flat files at $TOKEN_DIR/<token>
+# containing "<user>:<label>:<created_epoch>". Echoes the user on success.
+token_user() {
+    local token=$1
+    case "$token" in
+        ''|*[!a-f0-9]*) return 1 ;;
+    esac
+    local path="$TOKEN_DIR/$token"
+    [ -f "$path" ] || return 1
+    local line=$(cat "$path" 2>/dev/null)
+    local user=${line%%:*}
+    [ -n "$user" ] || return 1
+    printf '%s' "$user"
+}
 
 # Verify a plain password against the stored $1$ MD5-crypt hash for a
 # username in $HTPASSWD. Echoes the username on success, nothing on
@@ -110,7 +127,9 @@ cookie_token() {
 }
 
 # Try to identify the current user via cookie OR Basic auth, in that order.
-# Echoes the username on success, nothing on failure.
+# In Basic mode the password field is checked as a plain password first
+# (htpasswd) and, on failure, as a PAT token. Echoes the username on
+# success, nothing on failure.
 current_user() {
     local token=$(cookie_token)
     if [ -n "$token" ]; then
@@ -127,7 +146,20 @@ current_user() {
             local decoded=$(printf '%s' "$b64" | /ffp/bin/base64 -d 2>/dev/null)
             local u=${decoded%%:*}
             local p=${decoded#*:}
-            verify_password "$u" "$p"
+            local verified=$(verify_password "$u" "$p")
+            if [ -n "$verified" ]; then
+                printf '%s' "$verified"
+                return 0
+            fi
+            # Fallback: treat the password field as a PAT. Match only if
+            # the token's owner matches the supplied username (defence in
+            # depth - prevents one user's token from acting as another).
+            local tu=$(token_user "$p")
+            if [ -n "$tu" ] && [ "$tu" = "$u" ]; then
+                printf '%s' "$tu"
+                return 0
+            fi
+            return 1
             ;;
         *)
             return 1

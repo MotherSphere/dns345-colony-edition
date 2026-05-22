@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Colony Git</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -51,6 +51,10 @@
                         <span class="user-menu-glyph">#</span>
                         Your repositories
                     </a>
+                    <a class="user-menu-item" role="menuitem" href="tokens.html">
+                        <span class="user-menu-glyph">$</span>
+                        Access tokens
+                    </a>
                 </div>
                 <div class="user-menu-divider"></div>
                 <div class="user-menu-section">
@@ -83,7 +87,7 @@
 </footer>
 
 <script src="vendor/highlight.min.js"></script>
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 <script>
 // Topbar auth: real cookie session via /login.cgi + /logout.cgi.
 // On page load we probe /whoami.cgi - if it returns {user: <name>} we hide
@@ -125,6 +129,10 @@
         var yourReposLink = document.getElementById('your-repos-link');
         if (profileLink)  profileLink.href  = '#/u/' + encodeURIComponent(name);
         if (yourReposLink) yourReposLink.href = '#/u/' + encodeURIComponent(name);
+        // Publish the current user globally so app.js (which loads as a
+        // separate <script>) can hide/show owner-only UI like Settings tab.
+        window.__COLONY_USER__ = name;
+        window.dispatchEvent(new CustomEvent('colony-user-change', { detail: { user: name } }));
     }
 
     function setLoggedOut() {
@@ -133,6 +141,8 @@
         trigger.setAttribute('aria-expanded', 'false');
         signIn.classList.remove('hidden');
         if (newRepoLink) newRepoLink.classList.add('hidden');
+        window.__COLONY_USER__ = null;
+        window.dispatchEvent(new CustomEvent('colony-user-change', { detail: { user: null } }));
     }
 
     fetch('/colony-git/whoami.cgi', {

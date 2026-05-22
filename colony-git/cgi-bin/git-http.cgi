@@ -9,20 +9,16 @@
 #   patched binary, we authenticate here and unconditionally exec
 #   git-http-backend on success.
 #
-# Inputs (CGI environment):
-#   HTTP_AUTHORIZATION  - "Basic base64(user:pass)"  (from lighttpd)
-#   REMOTE_ADDR         - client IP
-#   PATH_INFO           - everything after /colony-git/repos
-#   QUERY_STRING        - usually service=git-upload-pack / git-receive-pack
-#   REQUEST_METHOD      - GET / POST
+# Accepted credential forms in the Basic password field:
+#   - the user's plain password (verified against the $1$ htpasswd entry)
+#   - a Personal Access Token (40 hex chars, looked up in $TOKEN_DIR)
 #
-# Hash format on disk: openssl `passwd -1` (MD5 crypt, $1$salt$hash).
-# We verify by calling `openssl passwd -1 -salt <stored_salt> <supplied_pw>`
-# and string-comparing the full hash.
+# The username MUST match the credential's owner in both cases.
 
 set -u
 
-HTPASSWD=${COLONY_GIT_HTPASSWD:-/mnt/HD/HD_a2/ffp/etc/colony-git.htpasswd}
+. "$(dirname "$0")/lib-auth.sh"
+
 GIT_HTTP_BACKEND=/ffp/libexec/git-core/git-http-backend
 REALM="Colony Git"
 
@@ -35,7 +31,6 @@ deny() {
     exit 0
 }
 
-# -- Extract Basic Authorization header -------------------------------------
 AUTH=${HTTP_AUTHORIZATION:-}
 case "$AUTH" in
     Basic\ *) ;;
@@ -49,43 +44,21 @@ fi
 USER=${DECODED%%:*}
 PASS=${DECODED#*:}
 
-# Username sanity (defense in depth - signup.cgi already enforces this).
 case "$USER" in
     ''|*[!A-Za-z0-9_-]*) deny "invalid username" ;;
 esac
 
-# -- Lookup user in htpasswd ------------------------------------------------
-if [ ! -f "$HTPASSWD" ]; then
-    deny "user database missing"
+# Password check (htpasswd) first - the cheap path for interactive users.
+VERIFIED=$(verify_password "$USER" "$PASS")
+if [ -z "$VERIFIED" ]; then
+    # Fallback: treat the password as a PAT. The token's owner must match
+    # the supplied username (defence in depth).
+    TU=$(token_user "$PASS")
+    if [ -n "$TU" ] && [ "$TU" = "$USER" ]; then
+        VERIFIED=$TU
+    fi
 fi
-LINE=$(grep "^${USER}:" "$HTPASSWD" 2>/dev/null | head -n 1)
-if [ -z "$LINE" ]; then
-    deny "invalid credentials"
-fi
-STORED=${LINE#*:}
+[ -n "$VERIFIED" ] || deny "invalid credentials"
 
-# -- Verify password --------------------------------------------------------
-# Stored format is `$1$salt$hash`. Re-compute with the same salt and compare.
-case "$STORED" in
-    \$1\$*)
-        # Extract salt: everything between the second and third '$'
-        REST=${STORED#\$1\$}
-        SALT=${REST%%\$*}
-        COMPUTED=$(/ffp/bin/openssl passwd -1 -salt "$SALT" "$PASS" 2>/dev/null)
-        ;;
-    *)
-        # Legacy/unsupported format. Reject rather than silently accept.
-        deny "unsupported password format"
-        ;;
-esac
-
-if [ "$COMPUTED" != "$STORED" ]; then
-    deny "invalid credentials"
-fi
-
-# -- Authenticated. Hand off to git-http-backend ---------------------------
-# git-http-backend reads PATH_INFO/QUERY_STRING/REQUEST_METHOD from env and
-# writes its CGI response (headers + body) directly to stdout. lighttpd has
-# already set GIT_PROJECT_ROOT and GIT_HTTP_EXPORT_ALL via setenv.
-export REMOTE_USER=$USER
+export REMOTE_USER=$VERIFIED
 exec "$GIT_HTTP_BACKEND"

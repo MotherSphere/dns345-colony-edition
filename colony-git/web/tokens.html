@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colony Git - Personal access tokens</title>
+<link rel="stylesheet" href="style.css?v=7">
+<style>
+  .auth-shell { max-width: 720px; margin: 32px auto 64px; padding: 0 24px; }
+  .auth-card {
+      background: var(--bg-soft);
+      border: 1px solid var(--ink-faint);
+      border-radius: var(--radius);
+      padding: 22px 26px;
+      margin-bottom: 18px;
+  }
+  .auth-card h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      color: var(--red);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+  }
+  .auth-card .subtitle {
+      margin: 0 0 18px;
+      color: var(--ink-faint);
+      font-size: 12px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .field label {
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--ink-dim);
+  }
+  .field input {
+      background: var(--bg);
+      border: 1px solid var(--ink-dim);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 7px 10px;
+      outline: none;
+  }
+  .field input:focus { border-color: var(--red); box-shadow: 0 0 0 2px var(--red-faint); }
+  .btn-primary {
+      background: var(--red);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 7px 16px;
+      text-transform: uppercase;
+  }
+  .btn-primary:hover { background: var(--red-hover); }
+  .btn-primary:disabled { background: var(--ink-dim); cursor: not-allowed; }
+  .new-token-secret {
+      background: var(--bg);
+      border: 1px dashed var(--red);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 12px;
+      word-break: break-all;
+      margin-top: 10px;
+  }
+  .new-token-warn {
+      color: var(--red-pressed);
+      font-size: 11px;
+      margin-top: 6px;
+  }
+  .token-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+  }
+  .token-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--bg-deeper);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+  }
+  .token-label { color: var(--ink); font-weight: 600; }
+  .token-id { color: var(--ink-faint); font-family: inherit; }
+  .token-date { color: var(--ink-faint); }
+  .token-revoke {
+      background: transparent;
+      border: 1px solid var(--red-soft);
+      color: var(--red);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 4px 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+  }
+  .token-revoke:hover { background: var(--red-faint); }
+  .empty-row { color: var(--ink-faint); font-size: 12px; padding: 16px 0; text-align: center; }
+  .msg { margin-top: 10px; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 12px; }
+  .msg.error { background: var(--red-faint); color: var(--red-pressed); border: 1px solid var(--red-soft); }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="/colony-git/">
+            <svg class="brand-logo" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="6"  cy="5"  r="2.6" fill="currentColor"/>
+                <circle cx="6"  cy="12" r="2.6" fill="currentColor"/>
+                <circle cx="6"  cy="19" r="2.6" fill="currentColor"/>
+                <circle cx="18" cy="9"  r="2.6" fill="currentColor"/>
+                <line x1="6" y1="5"  x2="6"  y2="19" stroke="currentColor" stroke-width="1.6"/>
+                <line x1="6" y1="9"  x2="18" y2="9"  stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <span class="brand-name">COLONY GIT</span>
+        </a>
+        <div class="grow"></div>
+    </div>
+</header>
+
+<main class="auth-shell">
+    <div class="auth-card">
+        <h1>Personal access tokens</h1>
+        <p class="subtitle">
+            Use tokens instead of your password for <code>git clone</code> / <code>push</code>.
+            A token is shown once at creation; treat it like a password.
+        </p>
+
+        <form id="create-form" autocomplete="off">
+            <div class="field">
+                <label for="f-label">Label</label>
+                <input id="f-label" type="text" maxlength="60" placeholder="laptop, work computer, ...">
+            </div>
+            <button id="create-btn" class="btn-primary" type="submit">Generate token</button>
+        </form>
+        <div id="new-secret" class="new-token-secret" hidden></div>
+        <div id="new-warn"   class="new-token-warn"   hidden>Copy it now - it will not be shown again.</div>
+        <div id="msg" class="msg error" hidden></div>
+    </div>
+
+    <div class="auth-card">
+        <h1 style="font-size:14px;margin-bottom:14px;">Active tokens</h1>
+        <ul id="token-list" class="token-list">
+            <li class="empty-row" id="empty-row">Loading...</li>
+        </ul>
+    </div>
+
+    <p style="text-align:center; font-size:11px; color: var(--ink-faint);">
+        <a href="/colony-git/" style="color: var(--red);">Back to repositories</a>
+    </p>
+</main>
+
+<script>
+(function () {
+    var form     = document.getElementById('create-form');
+    var labelIn  = document.getElementById('f-label');
+    var btn      = document.getElementById('create-btn');
+    var secret   = document.getElementById('new-secret');
+    var warn     = document.getElementById('new-warn');
+    var msg      = document.getElementById('msg');
+    var listNode = document.getElementById('token-list');
+    var emptyRow = document.getElementById('empty-row');
+
+    function showError(text) { msg.textContent = text; msg.hidden = false; }
+    function clearError() { msg.hidden = true; }
+
+    function esc(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    function fmtDate(epoch) {
+        if (!epoch) return '';
+        var d = new Date(epoch * 1000);
+        return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function refreshList() {
+        fetch('/colony-git/token-list.cgi', { credentials: 'include', cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (j) {
+                listNode.innerHTML = '';
+                if (j.error) { showError(j.error); return; }
+                if (!j.tokens || !j.tokens.length) {
+                    var li = document.createElement('li');
+                    li.className = 'empty-row';
+                    li.textContent = 'No active tokens.';
+                    listNode.appendChild(li);
+                    return;
+                }
+                j.tokens.sort(function (a, b) { return b.created - a.created; });
+                j.tokens.forEach(function (t) {
+                    var li = document.createElement('li');
+                    li.className = 'token-item';
+                    li.innerHTML =
+                        '<span class="token-label">' + esc(t.label) + '</span>' +
+                        '<span class="token-id">' + esc(t.id) + '...</span>' +
+                        '<span class="token-date">' + fmtDate(t.created) + '</span>';
+                    var btn = document.createElement('button');
+                    btn.className = 'token-revoke';
+                    btn.type = 'button';
+                    btn.textContent = 'Revoke';
+                    btn.addEventListener('click', function () {
+                        if (!confirm('Revoke token ' + t.label + '?')) return;
+                        fetch('/colony-git/token-revoke.cgi', {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'id=' + encodeURIComponent(t.id)
+                        })
+                        .then(function () { refreshList(); });
+                    });
+                    li.appendChild(btn);
+                    listNode.appendChild(li);
+                });
+            })
+            .catch(function (e) { showError('network error: ' + String(e)); });
+    }
+
+    // Auth gate.
+    fetch('/colony-git/whoami.cgi', { credentials: 'include', cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+            if (!j || !j.user) {
+                showError('You must sign in to manage tokens.');
+                btn.disabled = true;
+                listNode.innerHTML = '<li class="empty-row">Sign in to see your tokens.</li>';
+                return;
+            }
+            refreshList();
+        });
+
+    form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        clearError();
+        secret.hidden = true; warn.hidden = true;
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+
+        fetch('/colony-git/token-create.cgi', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'label=' + encodeURIComponent(labelIn.value.trim())
+        })
+        .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+        .then(function (res) {
+            btn.disabled = false;
+            btn.textContent = 'Generate token';
+            if (res.body && res.body.token) {
+                secret.textContent = res.body.token;
+                secret.hidden = false;
+                warn.hidden = false;
+                labelIn.value = '';
+                refreshList();
+                return;
+            }
+            showError((res.body && res.body.error) || 'failed');
+        })
+        .catch(function (e) {
+            btn.disabled = false;
+            btn.textContent = 'Generate token';
+            showError('network error: ' + String(e));
+        });
+    });
+})();
+</script>
+
+</body>
+</html>

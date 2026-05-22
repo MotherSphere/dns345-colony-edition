@@ -125,10 +125,17 @@ IFS=$saved_ifs
 # --- total commit count (HEAD) ---
 total_commits=$(git_in "$repo_dir" rev-list --count HEAD 2>/dev/null) || total_commits=0
 
+# --- owner (per-repo `owner` file, written by repo-create / backfill) ---
+owner=""
+if [ -f "$repo_dir/owner" ]; then
+    owner=$(head -n 1 "$repo_dir/owner" 2>/dev/null)
+fi
+
 # --- emit JSON ---
 printf '{'
 printf '"name":"%s",'           "$(json_escape_value "$name")"
 printf '"description":"%s",'    "$(json_escape_value "$desc")"
+printf '"owner":"%s",'          "$(json_escape_value "$owner")"
 printf '"default_branch":"%s",' "$(json_escape_value "$default_branch")"
 printf '"total_commits":%d,'    "${total_commits:-0}"
 printf '"license_path":%s,'     "$([ -n "$license_path" ] && printf '"%s"' "$(json_escape_value "$license_path")" || printf 'null')"
