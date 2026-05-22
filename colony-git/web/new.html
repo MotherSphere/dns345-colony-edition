@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colony Git - New repository</title>
+<link rel="stylesheet" href="style.css?v=5">
+<style>
+  /* Mirrors signup.html / login.html visual rhythm. */
+  .auth-shell {
+      max-width: 540px;
+      margin: 48px auto 0;
+      padding: 0 24px;
+  }
+  .auth-card {
+      background: var(--bg-soft);
+      border: 1px solid var(--ink-faint);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      padding: 28px 32px;
+  }
+  .auth-card h1 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      color: var(--red);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+  }
+  .auth-card .subtitle {
+      margin: 0 0 22px;
+      color: var(--ink-faint);
+      font-size: 12px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .field label {
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--ink-dim);
+  }
+  .field input, .field textarea {
+      background: var(--bg);
+      border: 1px solid var(--ink-dim);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 7px 10px;
+      outline: none;
+      resize: vertical;
+  }
+  .field input:focus, .field textarea:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 2px var(--red-faint);
+  }
+  .field .hint {
+      color: var(--ink-faint);
+      font-size: 11px;
+  }
+  .auth-actions { margin-top: 18px; display: flex; gap: 12px; align-items: center; }
+  .btn-primary {
+      background: var(--red);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 8px 18px;
+      text-transform: uppercase;
+      transition: background 80ms ease;
+  }
+  .btn-primary:hover { background: var(--red-hover); }
+  .btn-primary:disabled { background: var(--ink-dim); cursor: progress; }
+  .btn-ghost {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid var(--red);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 7px 16px;
+      text-transform: uppercase;
+      text-decoration: none;
+  }
+  .btn-ghost:hover { background: var(--red-faint); }
+  .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .auth-msg {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      line-height: 1.5;
+  }
+  .auth-msg.error {
+      background: var(--red-faint);
+      border: 1px solid var(--red-soft);
+      color: var(--red-pressed);
+  }
+  .auth-foot {
+      margin-top: 18px;
+      font-size: 11px;
+      color: var(--ink-faint);
+      text-align: center;
+  }
+  .auth-foot a { color: var(--red); }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="/colony-git/">
+            <svg class="brand-logo" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="6"  cy="5"  r="2.6" fill="currentColor"/>
+                <circle cx="6"  cy="12" r="2.6" fill="currentColor"/>
+                <circle cx="6"  cy="19" r="2.6" fill="currentColor"/>
+                <circle cx="18" cy="9"  r="2.6" fill="currentColor"/>
+                <line x1="6" y1="5"  x2="6"  y2="19" stroke="currentColor" stroke-width="1.6"/>
+                <line x1="6" y1="9"  x2="18" y2="9"  stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <span class="brand-name">COLONY GIT</span>
+        </a>
+        <div class="grow"></div>
+    </div>
+</header>
+
+<main class="auth-shell">
+    <div class="auth-card">
+        <h1>New repository</h1>
+        <p class="subtitle">A bare repository is created on the NAS. You become its owner.</p>
+
+        <form id="new-form" autocomplete="off">
+            <div class="field">
+                <label for="f-name">Repository name</label>
+                <input id="f-name" name="name" type="text" required
+                       minlength="1" maxlength="50"
+                       pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,49}"
+                       placeholder="my-project">
+                <span class="hint">1 to 50 chars. Letters, digits, . _ -. The <code>.git</code> suffix is added automatically.</span>
+            </div>
+            <div class="field">
+                <label for="f-desc">Description <span class="hint">(optional)</span></label>
+                <input id="f-desc" name="description" type="text" maxlength="200"
+                       placeholder="What is this repo for?">
+            </div>
+            <div class="auth-actions">
+                <button id="submit-btn" class="btn-primary" type="submit">Create repository</button>
+                <a class="btn-ghost" href="/colony-git/">Cancel</a>
+            </div>
+        </form>
+
+        <div id="msg" class="auth-msg error" hidden></div>
+    </div>
+
+    <p class="auth-foot">
+        <a href="/colony-git/">Back to repositories</a>
+    </p>
+</main>
+
+<script>
+(function () {
+    var form = document.getElementById('new-form');
+    var msg  = document.getElementById('msg');
+    var btn  = document.getElementById('submit-btn');
+
+    function showError(text) {
+        msg.textContent = text;
+        msg.hidden = false;
+    }
+
+    function encodeForm(data) {
+        var parts = [];
+        for (var k in data) {
+            if (data[k] == null) continue;
+            parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(data[k]));
+        }
+        return parts.join('&');
+    }
+
+    var originalBtnHtml = btn.innerHTML;
+    function setBusy(label) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>' + label;
+    }
+    function setIdle() {
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHtml;
+    }
+
+    // Block submit if not signed in (visible message instead of a 401).
+    fetch('/colony-git/whoami.cgi', { credentials: 'include', cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+            if (!j || !j.user) {
+                showError('You must sign in to create a repository.');
+                btn.disabled = true;
+                btn.innerHTML = 'Sign in required';
+            }
+        });
+
+    form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        setBusy('Creating...');
+        msg.hidden = true;
+
+        fetch('/colony-git/repo-create.cgi', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: encodeForm({
+                name: form.name.value.trim(),
+                description: form.description.value.trim()
+            })
+        })
+        .then(function (r) {
+            return r.json().then(function (j) { return { status: r.status, body: j }; });
+        })
+        .then(function (res) {
+            if (res.body && res.body.ok) {
+                setBusy('Loading your repository...');
+                // Drop the user on the new repo's page.
+                location.replace('/colony-git/#/' + encodeURIComponent(res.body.name));
+                return;
+            }
+            showError((res.body && res.body.error) || 'creation failed');
+            setIdle();
+        })
+        .catch(function (e) {
+            showError('network error: ' + String(e));
+            setIdle();
+        });
+    });
+})();
+</script>
+
+</body>
+</html>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Colony Git</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -26,6 +26,7 @@
         <div class="searchbox">
             <input id="search-input" type="search" placeholder="Search repos..." autocomplete="off">
         </div>
+        <a id="new-repo-link" class="topbar-icon hidden" href="new.html" title="New repository" aria-label="New repository">+</a>
         <div id="whoami-menu" class="user-menu hidden">
             <button id="whoami-trigger" class="user-menu-avatar" type="button" aria-haspopup="menu" aria-expanded="false">
                 <span id="whoami-initials" class="user-menu-initials">?</span>
@@ -110,6 +111,8 @@
         return chars.toUpperCase();
     }
 
+    var newRepoLink = document.getElementById('new-repo-link');
+
     function setLoggedIn(name) {
         var inits = initialsFor(name);
         initialsSmall.textContent = inits;
@@ -117,6 +120,7 @@
         usernameNode.textContent = name;
         menu.classList.remove('hidden');
         signIn.classList.add('hidden');
+        if (newRepoLink) newRepoLink.classList.remove('hidden');
         var profileLink = document.getElementById('profile-link');
         var yourReposLink = document.getElementById('your-repos-link');
         if (profileLink)  profileLink.href  = '#/u/' + encodeURIComponent(name);
@@ -128,6 +132,7 @@
         dropdown.classList.add('hidden');
         trigger.setAttribute('aria-expanded', 'false');
         signIn.classList.remove('hidden');
+        if (newRepoLink) newRepoLink.classList.add('hidden');
     }
 
     fetch('/colony-git/whoami.cgi', {

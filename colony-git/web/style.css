@@ -147,6 +147,31 @@ a:hover { color: var(--red-hover); text-decoration: underline; }
     background: var(--red-faint);
     color: var(--red);
 }
+/* ============== topbar icon button (e.g. + for New repo) ============== */
+.topbar-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--ink-faint);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    transition: background 80ms ease, border-color 80ms ease;
+}
+.topbar-icon:hover {
+    background: var(--red-faint);
+    border-color: var(--red);
+    color: var(--red);
+    text-decoration: none;
+}
+
 /* ============== user menu (floating panel) ============== */
 .user-menu {
     position: relative;
